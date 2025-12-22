@@ -37,3 +37,5 @@ node_modules/
 # OS
 .DS_Store
 venv/ 
+"flask-jwt-auth/.env" 
+"flask-jwt-auth/app/__pycache__/" 
