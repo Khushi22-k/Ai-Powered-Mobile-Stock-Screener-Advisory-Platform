@@ -39,3 +39,7 @@ node_modules/
 venv/ 
 "flask-jwt-auth/.env" 
 "flask-jwt-auth/app/__pycache__/" 
+flask-jwt-auth/.env 
+flask-jwt-auth/app/__pycache__/ 
+flask-jwt-auth/__pycache__/ 
+venv/ 
