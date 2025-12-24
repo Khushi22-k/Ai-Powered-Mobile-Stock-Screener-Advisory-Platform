@@ -23,9 +23,11 @@
     "vite": "^7.2.7"
   },
   "dependencies": {
+    "chart.js": "^4.5.1",
     "lucide-react": "^0.562.0",
     "openai": "^6.15.0",
     "react": "^19.2.1",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.1",
     "react-router-dom": "^7.10.1",
     "uuid": "^13.0.0"

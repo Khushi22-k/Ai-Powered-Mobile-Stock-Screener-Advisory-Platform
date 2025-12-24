@@ -67,8 +67,8 @@ const ChatGPTClone = () => {
                 <Search size={16} /> <span className="text-sm">Search</span>
              </div>
              <p className="text-[11px] text-gray-500 font-bold mt-6 mb-2 px-2 uppercase tracking-wider">Recent</p>
-             <div className="text-sm text-gray-300 px-2 py-2 hover:bg-[#2f2f2f] rounded-lg cursor-pointer truncate">Vite import error fix</div>
-             <div className="text-sm text-gray-300 px-2 py-2 hover:bg-[#2f2f2f] rounded-lg cursor-pointer truncate">Frontend React UI</div>
+             <div className="text-sm text-gray-300 px-2 py-2 hover:bg-[#2f2f2f] rounded-lg cursor-pointer truncate">what is the highest..</div>
+             <div className="text-sm text-gray-300 px-2 py-2 hover:bg-[#2f2f2f] rounded-lg cursor-pointer truncate">lowest value stock</div>
           </div>
 
           <div className="p-2 mt-auto border-t border-white/10">
@@ -88,7 +88,7 @@ const ChatGPTClone = () => {
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-[#2f2f2f] rounded-lg text-gray-400">
             {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
           </button>
-          <span className="font-semibold text-gray-200">ChatGPT 4o</span>
+          <span className="font-semibold text-gray-200">LLM Model</span>
         </header>
 
         {/* Message Thread */}

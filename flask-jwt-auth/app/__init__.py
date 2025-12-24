@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, app
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from .db import db
@@ -19,6 +19,9 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     app.config["JWT_SECRET_KEY"] = "1234567890"
+    app.config["JWT_TOKEN_LOCATION"] = ["headers"]
+    app.config["JWT_HEADER_NAME"] = "Authorization"
+    app.config["JWT_HEADER_TYPE"] = "Bearer"
 
     db.init_app(app)
     JWTManager(app)

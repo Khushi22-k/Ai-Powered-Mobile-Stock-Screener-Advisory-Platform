@@ -5,6 +5,7 @@ import Auth from './pages/Auth.jsx';
 import Signup from './pages/signup.jsx';
 import Chatgpt from './pages/chatgpt.jsx';
 import Dashboard from './pages/Dashboard.jsx'
+import {Chart as ChartJS } from 'chart.js/auto';
 
 function App() {
   const isAuthenticated = !!localStorage.getItem('access_token');
@@ -15,7 +16,7 @@ function App() {
         <Link to="/">Home</Link>
         <Link to="/signin">Sign In</Link>
         <Link to="/signup">Sign Up</Link>
-        {isAuthenticated && <Link to="/chatgpt">ChatGPT</Link>}
+        
       </nav>
 
       <Routes>

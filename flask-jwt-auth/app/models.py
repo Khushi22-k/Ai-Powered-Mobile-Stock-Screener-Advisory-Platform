@@ -24,3 +24,25 @@ class ChatRequest(db.Model):
     role = db.Column(db.String(50))
     content = db.Column(db.Text)
     embedding = db.Column(Vector(768))
+
+class StockData(db.Model):
+    __tablename__ = 'stock_data'
+
+    id = db.Column(db.Integer, primary_key=True)
+    company = db.Column(db.String(30), nullable=False)
+    symbol = db.Column(db.String(30), nullable=False)
+    industry = db.Column(db.String(30), nullable=False)
+    series = db.Column(db.String(10), nullable=False)
+    open_price = db.Column(db.Numeric(10, 2), nullable=False)
+    high_price = db.Column(db.Numeric(10, 2), nullable=False)
+    low_price = db.Column(db.Numeric(10, 2), nullable=False)
+    previous_close = db.Column(db.Numeric(10, 2), nullable=False)
+    last_traded_price = db.Column(db.Numeric(10, 2), nullable=False)
+    price_change = db.Column(db.Numeric(10, 2), nullable=False)
+    percentage_change = db.Column(db.Numeric(6, 2), nullable=False)
+    day_percentage_change = db.Column(db.Numeric(6, 2), nullable=False)
+    share_volume = db.Column(db.BigInteger, nullable=False)
+    value_inr = db.Column(db.Numeric(18, 2), nullable=False)
+    week_high = db.Column(db.Numeric(10, 2), nullable=False)
+    week_low = db.Column(db.Numeric(10, 2), nullable=False)
+    daypercentagechange = db.Column(db.Numeric(6, 2), nullable=True)

@@ -2,7 +2,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000'
 
 
 export async function login(username, password){
-const res = await fetch(`${API_BASE}/signin`, {
+const res = await fetch(`${API_BASE}/auth/login`, {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({ username, password })
