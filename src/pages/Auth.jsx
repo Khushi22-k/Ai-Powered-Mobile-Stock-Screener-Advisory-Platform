@@ -104,10 +104,10 @@ export default function Auth({ mode = "signin" }) {
      };
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-10">
-      <div className="w-full max-w-6xl grid-cols-2 gap-12 lg:grid">
+      <div className="w-full max-w-6xl flex items-center justify-center">
         {/* Left Side - Features */}
         <section className="flex items-center">
-          <div className="w-full rounded-[1.75rem] border border-slate-800 bg-slate-950/85 p-6 shadow-2xl shadow-black/50 sm:p-8">
+          <div className="w-[600px] h-[600px] rounded-[1.75rem] border border-slate-800 bg-slate-950/85 p-6 shadow-2xl shadow-black/50 sm:p-8 overflow-auto flex flex-col items-center justify-center">
             <div className="mb-8 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-semibold text-slate-50">

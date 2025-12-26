@@ -16,6 +16,7 @@ const ChatGPTClone = () => {
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);
   const [sessionId,setSessionId]= useState(null) // Stores the chat conversation
+  const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -31,6 +32,7 @@ const ChatGPTClone = () => {
     // 1️⃣ Add user message immediately
     setMessages(prev => [...prev, { text: userMessage, sender: "user" }]);
     setQuery("");
+    setLoading(true);
 
     try {
       // 2️⃣ Call backend API
@@ -47,6 +49,8 @@ const ChatGPTClone = () => {
         ...prev,
         { text: "Server error. Please try again.", sender: "bot" }
       ]);
+    } finally {
+      setLoading(false);
     }
   }
 };
@@ -88,7 +92,7 @@ const ChatGPTClone = () => {
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-[#2f2f2f] rounded-lg text-gray-400">
             {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
           </button>
-          <span className="font-semibold text-gray-200">LLM Model</span>
+          <span className="font-semibold text-gray-200">Rag Application Assistant</span>
         </header>
 
         {/* Message Thread */}
