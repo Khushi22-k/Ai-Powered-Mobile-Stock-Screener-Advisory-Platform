@@ -5,19 +5,32 @@ import {
   Plus,
   ArrowUp,
   Search,
-  Mic
+  Mic,
+  Menu,
+  X,
+  LogOut
 } from 'lucide-react';
 import {v4 as uuidv4} from "uuid";
+import { useNavigate } from 'react-router-dom';
 import { chatGPTQuery } from '/src/utils/chatApi.js';
 
 
 const ChatGPTClone = () => {
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);
   const [sessionId,setSessionId]= useState(null) // Stores the chat conversation
   const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState(localStorage.getItem('username'));
   const messagesEndRef = useRef(null);
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("username");
+    navigate("/login");
+  };
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -78,7 +91,7 @@ const ChatGPTClone = () => {
           <div className="p-2 mt-auto border-t border-white/10">
             <div className="flex items-center gap-2 p-2 hover:bg-[#2f2f2f] rounded-lg cursor-pointer">
               <div className="w-8 h-8 bg-orange-700 rounded-full flex items-center justify-center text-[10px]">KS</div>
-              <span className="text-sm">Khushi Sharma</span>
+              <span className="text-sm">username</span>
             </div>
           </div>
         </div>
@@ -88,12 +101,49 @@ const ChatGPTClone = () => {
       <main className="flex-1 flex flex-col relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
         
         {/* Header */}
-        <header className="p-4 flex items-center gap-4">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-[#2f2f2f] rounded-lg text-gray-400">
-            {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+        <header className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-[#2f2f2f] rounded-lg text-gray-400">
+              {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+            </button>
+            <span className="font-semibold text-gray-200">Rag Application Assistant</span>
+          </div>
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="p-2 bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 rounded-xl border border-slate-700/50 transition"
+          >
+            {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <span className="font-semibold text-gray-200">Rag Application Assistant</span>
         </header>
+        {isMenuOpen && (
+          <div className="px-4 pb-4 flex flex-wrap gap-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => navigate('/chatgpt')}
+              className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
+            >
+              ChatGPT
+            </button>
+            <button
+              onClick={() => navigate('/watchlist')}
+              className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
+            >
+              Watchlist
+            </button>
+            <button
+              onClick={handleLogout}
+              className="bg-red-600 hover:bg-red-700 text-slate-50 px-4 py-2 rounded-xl border border-red-500 transition flex items-center gap-2"
+            >
+              <LogOut size={16} />
+              Logout
+            </button>
+          </div>
+        )}
 
         {/* Message Thread */}
         <div className="flex-1 overflow-y-auto pb-40">

@@ -1,6 +1,7 @@
 from flask import Flask, app
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flask_migrate import Migrate
 from .db import db
 import openai
 
@@ -24,6 +25,7 @@ def create_app():
     app.config["JWT_HEADER_TYPE"] = "Bearer"
 
     db.init_app(app)
+    Migrate(app, db)
     JWTManager(app)
 
     from .auth import auth_bp

@@ -7,7 +7,7 @@ from .llm import call_ai_model
 import uuid
 from tqdm import tqdm
 import requests
-from .models import User, ChatRequest, StockData
+from .models import User, ChatRequest, StockData, Watchlist
 from .rag import retrieve_context
 from sqlalchemy import create_engine
 from config import Config
@@ -155,7 +155,8 @@ def signin():
     return jsonify({
         "message": "Login successful",
         "access_token": access_token,
-        "refresh_token": refresh_token
+        "refresh_token": refresh_token,
+        "username": user.username
 
       })
 @auth_bp.route('/chat', methods=['POST'])
@@ -186,15 +187,40 @@ def get_stocks():
         'change': stock.price_change,
         'changePercent': stock.percentage_change,
         'volume': stock.share_volume,
-        'marketCap': stock.value_inr,
-        'riskScore': 5.0  # Default risk score since not in stock_data
+        'marketCap': stock.value_inr
     } for stock in stocks]
+    return jsonify(stock_data)
+
+@auth_bp.route('/stock/<company_name>', methods=['GET'])
+def get_stock_by_company(company_name):
+    # Fetch stock data for the specified company (case-insensitive partial match)
+    stock = StockData.query.filter(StockData.company.ilike(f'%{company_name}%')).first()
+    if not stock:
+        return jsonify({'error': 'Company not found'}), 404
+    stock_data = {
+        'company': stock.company,
+        'symbol': stock.symbol,
+        'industry': stock.industry,
+        'series': stock.series,
+        'open_price': float(stock.open_price),
+        'high_price': float(stock.high_price),
+        'low_price': float(stock.low_price),
+        'previous_close': float(stock.previous_close),
+        'last_traded_price': float(stock.last_traded_price),
+        'price_change': float(stock.price_change),
+        'percentage_change': float(stock.percentage_change),
+        'day_percentage_change': float(stock.day_percentage_change),
+        'share_volume': int(stock.share_volume),
+        'value_inr': float(stock.value_inr),
+        'week_high': float(stock.week_high),
+        'week_low': float(stock.week_low),
+        'daypercentagechange': float(stock.daypercentagechange) if stock.daypercentagechange else None
+    }
     return jsonify(stock_data)
 
 @auth_bp.route('/stocks/history/<symbol>', methods=['GET'])
 @jwt_required()
 def get_stock_history(symbol):
-    # Mock historical data - in real app, fetch from API
     import random
     base_price = 100 + random.randint(50, 200)
     history = []
@@ -245,20 +271,18 @@ def get_stock_data():
     return jsonify(stock_data)
 
 
-
-
 # Function to populate sample stock data
 def populate_sample_stocks():
-    if Stock.query.count() == 0:  # Only populate if table is empty
+    if StockData.query.count() == 0:  # Only populate if table is empty
         sample_stocks = [
-            Stock(symbol='AAPL', name='Apple Inc.', price=175.43, change=2.34, changePercent=1.35, volume=45230000, marketCap=2800000000000, riskScore=3.5),
-            Stock(symbol='GOOGL', name='Alphabet Inc.', price=138.21, change=-1.23, changePercent=-0.88, volume=25670000, marketCap=1750000000000, riskScore=4.0),
-            Stock(symbol='MSFT', name='Microsoft Corporation', price=378.85, change=5.67, changePercent=1.52, volume=19850000, marketCap=2820000000000, riskScore=3.0),
-            Stock(symbol='AMZN', name='Amazon.com Inc.', price=144.05, change=-0.89, changePercent=-0.61, volume=38760000, marketCap=1480000000000, riskScore=4.5),
-            Stock(symbol='TSLA', name='Tesla Inc.', price=248.42, change=12.34, changePercent=5.23, volume=89450000, marketCap=790000000000, riskScore=8.5),  # High risk
-            Stock(symbol='NVDA', name='NVIDIA Corporation', price=875.28, change=15.67, changePercent=1.82, volume=41230000, marketCap=2150000000000, riskScore=7.0),  # High risk
-            Stock(symbol='META', name='Meta Platforms Inc.', price=484.10, change=-8.92, changePercent=-1.81, volume=15670000, marketCap=1230000000000, riskScore=5.5),
-            Stock(symbol='NFLX', name='Netflix Inc.', price=442.57, change=7.89, changePercent=1.81, volume=5234000, marketCap=192000000000, riskScore=6.0),
+            StockData(symbol='AAPL', company='Apple Inc.', last_traded_price=175.43, price_change=2.34, percentage_change=1.35, share_volume=45230000, value_inr=2800000000000),
+            StockData(symbol='GOOGL', company='Alphabet Inc.', last_traded_price=138.21, price_change=-1.23, percentage_change=-0.88, share_volume=25670000, value_inr=1750000000000),
+            StockData(symbol='MSFT', company='Microsoft Corporation', last_traded_price=378.85, price_change=5.67, percentage_change=1.52, share_volume=19850000, value_inr=2820000000000),
+            StockData(symbol='AMZN', company='Amazon.com Inc.', last_traded_price=144.05, price_change=-0.89, percentage_change=-0.61, share_volume=38760000, value_inr=1480000000000),
+            StockData(symbol='TSLA', company='Tesla Inc.', last_traded_price=248.42, price_change=12.34, percentage_change=5.23, share_volume=89450000, value_inr=790000000000),
+            StockData(symbol='NVDA', company='NVIDIA Corporation', last_traded_price=875.28, price_change=15.67, percentage_change=1.82, share_volume=41230000, value_inr=2150000000000),
+            StockData(symbol='META', company='Meta Platforms Inc.', last_traded_price=484.10, price_change=-8.92, percentage_change=-1.81, share_volume=15670000, value_inr=1230000000000),
+            StockData(symbol='NFLX', company='Netflix Inc.', last_traded_price=442.57, price_change=7.89, percentage_change=1.81, share_volume=5234000, value_inr=192000000000),
         ]
         db.session.add_all(sample_stocks)
         db.session.commit()

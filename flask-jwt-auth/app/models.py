@@ -46,3 +46,4 @@ class StockData(db.Model):
     week_high = db.Column(db.Numeric(10, 2), nullable=False)
     week_low = db.Column(db.Numeric(10, 2), nullable=False)
     daypercentagechange = db.Column(db.Numeric(6, 2), nullable=True)
+

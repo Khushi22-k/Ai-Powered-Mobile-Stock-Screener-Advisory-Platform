@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
-import { TrendingUp, TrendingDown, DollarSign, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, Menu, X, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const token = localStorage.getItem("access_token");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
 useEffect(() => {
   if (!token) {
@@ -24,6 +25,12 @@ useEffect(() => {
   const [loading, setLoading] = useState(true);
 
   const API_BASE = 'http://127.0.0.1:5000';
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("username");
+    navigate("/login");
+  };
 
 
   useEffect(() => {
@@ -79,6 +86,8 @@ useEffect(() => {
   }
 };
 
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
@@ -104,11 +113,12 @@ useEffect(() => {
     }]
   };
 
+  const filteredStocks = stocks.filter(stock => stock.symbol !== 'TCS' && stock.symbol !== 'INFY').slice(0, 10);
   const volumeChartData = {
-    labels: stocks.map(stock => stock.symbol),
+    labels: filteredStocks.map(stock => stock.symbol),
     datasets: [{
       label: 'Volume',
-      data: stocks.map(stock => stock.volume),
+      data: filteredStocks.map(stock => stock.volume),
       backgroundColor: 'rgba(59, 130, 246, 0.8)',
       borderColor: 'rgba(59, 130, 246, 1)',
       borderWidth: 1,
@@ -149,18 +159,53 @@ useEffect(() => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-50 mb-2">Stock Market Dashboard</h1>
-          <p className="text-slate-400">Real-time stock prices and market data</p>
-          <button
-            onClick={() => navigate('/chatgpt')}
-            className="mt-4 bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
-          >
-            Open Chat Assistant
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex">
+      <div className={`transition-all duration-300 ${isMenuOpen ? 'w-1/3' : 'w-0'} bg-slate-800/50 border-r border-slate-700/50 overflow-hidden`}>
+        <div className="p-6">
+          <h2 className="text-xl font-semibold text-slate-50 mb-4">Navigation</h2>
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => navigate('/chatgpt')}
+              className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
+            >
+              ChatGPT
+            </button>
+            <button
+              onClick={() => navigate('/watchlist')}
+              className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
+            >
+              Watchlist
+            </button>
+            <button
+              onClick={handleLogout}
+              className="bg-red-600 hover:bg-red-700 text-slate-50 px-4 py-2 rounded-xl border border-red-500 transition flex items-center gap-2"
+            >
+              <LogOut size={16} />
+              Logout
+            </button>
+          </div>
         </div>
+      </div>
+      <div className="flex-1 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-3xl font-bold text-slate-50">Stock Market Dashboard</h1>
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 rounded-xl border border-slate-700/50 transition"
+              >
+                {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            </div>
+            <p className="text-slate-400">Real-time stock prices and market data</p>
+          </div>
 
         {/* Market Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -259,6 +304,8 @@ useEffect(() => {
           </div>
         </div>
 
+
+
         {/* Additional Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
@@ -327,6 +374,7 @@ useEffect(() => {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -95,6 +95,7 @@ export default function Auth({ mode = "signin" }) {
 
       console.log("Login success");
       localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("username", data.username);
 
     // ✅ 2. Redirect
     navigate("/dashboard");
