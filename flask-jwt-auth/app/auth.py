@@ -19,7 +19,6 @@ from werkzeug.security import check_password_hash
 from pgvector.sqlalchemy import Vector
 from pgvector.psycopg2 import register_vector
 from sqlalchemy import Column,Integer
-from .RealTimeFetch import fetch_stock_symbol, fetch_single_stock, fetch_highest_gainer, fetch_highest_loser, nse
 
 #setting api
 auth_bp = Blueprint("auth", __name__,url_prefix='/auth')
