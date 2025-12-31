@@ -71,7 +71,7 @@ const ChatGPTClone = () => {
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("username");
-    navigate("/login");
+    navigate("/signin");
   };
 
   // Auto-scroll to bottom when new messages arrive

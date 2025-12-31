@@ -226,39 +226,6 @@ def get_stock_by_symbol(symbol):
         }
         return jsonify(stock_data)
 
-    # If not in database, try real-time NSE data
-    try:
-        stock_quote = nse.get_stock_quote(symbol)
-        if not stock_quote:
-            return jsonify({'error': 'Stock not found'}), 404
-        stock_data = {
-            'name': stock_quote.get('companyName', symbol),
-            'symbol': symbol,
-            'price': stock_quote.get('lastPrice', 0),
-            'change': stock_quote.get('change', 0),
-            'changePercent': stock_quote.get('pChange', 0),
-            'volume': stock_quote.get('totalTradedVolume', 0),
-            'marketCap': stock_quote.get('totalTradedValue', 0),
-            'industry': stock_quote.get('industry', 'N/A'),
-            'series': stock_quote.get('series', 'N/A'),
-            'open_price': stock_quote.get('open', 0),
-            'high_price': stock_quote.get('dayHigh', 0),
-            'low_price': stock_quote.get('dayLow', 0),
-            'previous_close': stock_quote.get('previousClose', 0),
-            'last_traded_price': stock_quote.get('lastPrice', 0),
-            'price_change': stock_quote.get('change', 0),
-            'percentage_change': stock_quote.get('pChange', 0),
-            'day_percentage_change': stock_quote.get('pChange', 0),
-            'share_volume': stock_quote.get('totalTradedVolume', 0),
-            'value_inr': stock_quote.get('totalTradedValue', 0),
-            'week_high': stock_quote.get('weekHigh', 0),
-            'week_low': stock_quote.get('weekLow', 0),
-            'daypercentagechange': stock_quote.get('pChange', 0)
-        }
-        return jsonify(stock_data)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @auth_bp.route('/stocks/history/<symbol>', methods=['GET'])
 def get_stock_history(symbol):
     import random

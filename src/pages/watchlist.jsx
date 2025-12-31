@@ -54,7 +54,7 @@ export default function Watchlist() {
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("username");
-    navigate("/login");
+    navigate("/signin");
   };
 
   const API_BASE = 'http://127.0.0.1:5000';
@@ -420,7 +420,7 @@ export default function Watchlist() {
           <div className="bg-slate-800/50 rounded-xl p-6 border-2 border-slate-600 shadow-lg">
             <h3 className="text-lg font-semibold text-slate-50 mb-4">Price History (Candlestick Chart)</h3>
             <div style={{ height: '350px' }}>
-              <Bar data={candlestickChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} />
+              <Bar data={candlestickChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { barThickness: 20 } } }} />
             </div>
           </div>
           <div className="bg-slate-800/50 rounded-xl p-6 border-2 border-slate-600 shadow-lg">

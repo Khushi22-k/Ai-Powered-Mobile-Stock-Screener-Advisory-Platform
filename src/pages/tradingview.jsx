@@ -17,7 +17,7 @@ function TradingViewWidget() {
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("username");
-    navigate("/login");
+    navigate("/signin");
   };
 
   useEffect(
