@@ -174,13 +174,19 @@ useEffect(() => {
               onClick={() => navigate('/chatgpt')}
               className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
             >
-              ChatGPT
+              Advisory Platform
             </button>
             <button
               onClick={() => navigate('/watchlist')}
               className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
             >
               Watchlist
+            </button>
+             <button
+              onClick={() => navigate('/tradingview')}
+              className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
+            >
+              Portfolio
             </button>
             <button
               onClick={handleLogout}
@@ -298,10 +304,7 @@ useEffect(() => {
             <h3 className="text-lg font-semibold text-slate-50 mb-4">Market Cap Distribution</h3>
             <Pie data={marketCapChartData} options={{ responsive: true }} />
           </div>
-          <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
-            <h3 className="text-lg font-semibold text-slate-50 mb-4">Risk Scores of Investment Companies</h3>
-            <Bar data={riskChartData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
-          </div>
+         
         </div>
 
 

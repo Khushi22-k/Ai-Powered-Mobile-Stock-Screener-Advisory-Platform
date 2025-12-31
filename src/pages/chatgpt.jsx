@@ -21,10 +21,52 @@ const ChatGPTClone = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);
-  const [sessionId,setSessionId]= useState(null) // Stores the chat conversation
+  const [sessions, setSessions] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState(localStorage.getItem('username'));
   const messagesEndRef = useRef(null);
+
+  const createNewSession = () => {
+    const newSession = {
+      id: uuidv4(),
+      title: 'New Chat',
+      messages: []
+    };
+    setSessions(prev => [newSession, ...prev]);
+    setCurrentSessionId(newSession.id);
+    setMessages([]);
+  };
+
+  const loadSession = (sessionId) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) {
+      setCurrentSessionId(sessionId);
+      setMessages(session.messages);
+    }
+  };
+
+  const saveSessions = (sessionsToSave) => {
+    localStorage.setItem('chatSessions', JSON.stringify(sessionsToSave));
+  };
+
+  useEffect(() => {
+    const savedSessions = localStorage.getItem('chatSessions');
+    if (savedSessions) {
+      const parsed = JSON.parse(savedSessions);
+      setSessions(parsed);
+      if (parsed.length > 0) {
+        setCurrentSessionId(parsed[0].id);
+        setMessages(parsed[0].messages);
+      }
+    } else {
+      createNewSession();
+    }
+  }, []);
+
+  useEffect(() => {
+    saveSessions(sessions);
+  }, [sessions]);
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
@@ -39,34 +81,37 @@ const ChatGPTClone = () => {
 
 
   const handleSendMessage = async (e) => {
-  if ((e.key === "Enter" || e.type === "click") && query.trim()) {
-    const userMessage = query;
+    if ((e.key === "Enter" || e.type === "click") && query.trim()) {
+      const userMessage = query;
+      const newMessages = [...messages, { text: userMessage, sender: "user" }];
+      setMessages(newMessages);
+      setQuery("");
+      setLoading(true);
 
-    // 1️⃣ Add user message immediately
-    setMessages(prev => [...prev, { text: userMessage, sender: "user" }]);
-    setQuery("");
-    setLoading(true);
-
-    try {
-      // 2️⃣ Call backend API
-      const res = await chatGPTQuery(userMessage);
-
-      // 3️⃣ Add assistant response
-      setMessages(prev => [
-        ...prev,
-        { text: res.response, sender: "bot" }
-      ]);
-
-    } catch (err) {
-      setMessages(prev => [
-        ...prev,
-        { text: "Server error. Please try again.", sender: "bot" }
-      ]);
-    } finally {
-      setLoading(false);
+      try {
+        const res = await chatGPTQuery(userMessage);
+        const botMessage = { text: res.response, sender: "bot" };
+        const finalMessages = [...newMessages, botMessage];
+        setMessages(finalMessages);
+        setSessions(prev => prev.map(sess =>
+          sess.id === currentSessionId
+            ? { ...sess, messages: finalMessages, title: sess.title === 'New Chat' ? userMessage.slice(0, 30) : sess.title }
+            : sess
+        ));
+      } catch (err) {
+        const errorMessage = { text: "Server error. Please try again.", sender: "bot" };
+        const finalMessages = [...newMessages, errorMessage];
+        setMessages(finalMessages);
+        setSessions(prev => prev.map(sess =>
+          sess.id === currentSessionId
+            ? { ...sess, messages: finalMessages, title: sess.title === 'New Chat' ? userMessage.slice(0, 30) : sess.title }
+            : sess
+        ));
+      } finally {
+        setLoading(false);
+      }
     }
-  }
-};
+  };
 
 
   return (
@@ -75,7 +120,7 @@ const ChatGPTClone = () => {
       {/* SIDEBAR */}
       <aside className={`border-slate-800 bg-slate-950 via-slate-900 to-slate-950  transition-all duration-300 border-r border-white/5 ${isSidebarOpen ? 'w-64' : 'w-0'} flex flex-col`}>
         <div className="p-4 flex flex-col h-full min-w-[260px]">
-          <button className="flex items-center gap-2 hover:bg-[#2f2f2f] p-3 rounded-xl transition text-sm font-medium">
+          <button onClick={createNewSession} className="flex items-center gap-2 hover:bg-[#2f2f2f] p-3 rounded-xl transition text-sm font-medium">
             <Plus size={18} /> New chat
           </button>
           
@@ -84,8 +129,11 @@ const ChatGPTClone = () => {
                 <Search size={16} /> <span className="text-sm">Search</span>
              </div>
              <p className="text-[11px] text-gray-500 font-bold mt-6 mb-2 px-2 uppercase tracking-wider">Recent</p>
-             <div className="text-sm text-gray-300 px-2 py-2 hover:bg-[#2f2f2f] rounded-lg cursor-pointer truncate">what is the highest..</div>
-             <div className="text-sm text-gray-300 px-2 py-2 hover:bg-[#2f2f2f] rounded-lg cursor-pointer truncate">lowest value stock</div>
+             {sessions.map(session => (
+               <div key={session.id} className={`text-sm text-gray-300 px-2 py-2 hover:bg-[#2f2f2f] rounded-lg cursor-pointer truncate ${session.id === currentSessionId ? 'bg-[#2f2f2f]' : ''}`} onClick={() => loadSession(session.id)}>
+                 {session.title}
+               </div>
+             ))}
           </div>
 
           <div className="p-2 mt-auto border-t border-white/10">
@@ -127,13 +175,19 @@ const ChatGPTClone = () => {
               onClick={() => navigate('/chatgpt')}
               className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
             >
-              ChatGPT
+              Advisory Platform
             </button>
             <button
               onClick={() => navigate('/watchlist')}
               className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
             >
               Watchlist
+            </button>
+            <button
+              onClick={() => navigate('/tradingview')}
+              className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
+            >
+              portfolio
             </button>
             <button
               onClick={handleLogout}

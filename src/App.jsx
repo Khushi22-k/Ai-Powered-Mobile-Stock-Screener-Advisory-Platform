@@ -6,6 +6,7 @@ import Signup from './pages/signup.jsx';
 import Chatgpt from './pages/chatgpt.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Watchlist from './pages/watchlist.jsx';
+import TradingViewWidget from './pages/tradingview.jsx';
 import {Chart as ChartJS } from 'chart.js/auto';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
         <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/signin" />} />
         <Route path="/chatgpt" element={isAuthenticated ? <Chatgpt /> : <Navigate to="/signin" />} />
         <Route path="/watchlist" element={isAuthenticated ? <Watchlist /> : <Navigate to="/signin" />} />
+        <Route path="/tradingview" element={isAuthenticated ? <TradingViewWidget /> : <Navigate to="/signin" />} />
       </Routes>
     </div>
   );

@@ -49,6 +49,7 @@ export default function Watchlist() {
   const [loading, setLoading] = useState(true);
   const [inputCompany, setInputCompany] = useState('');
   const [searchedStock, setSearchedStock] = useState(null);
+  const [isStockSliderOpen, setIsStockSliderOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
@@ -58,8 +59,17 @@ export default function Watchlist() {
 
   const API_BASE = 'http://127.0.0.1:5000';
 
+  const formatNumber = (value, decimals = 2) => {
+  const num = Number(value);
+  return isNaN(num) ? "N/A" : num.toFixed(decimals);
+};
+
+
   // Hardcoded companies for boxes
   const companies = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN'];
+
+  // Additional companies for the stock slider
+  const additionalCompanies = ['NVDA', 'META', 'NFLX', 'GOOG', 'ORCL', 'IBM', 'INTC', 'AMD', 'CRM', 'ADBE'];
 
   useEffect(() => {
     fetchStocks();
@@ -71,24 +81,26 @@ export default function Watchlist() {
     }
   }, [selectedStock]);
 
-  const fetchStocks = async () => {
-    if (!authHeaders) return;
+ const fetchStocks = async () => {
+  if (!authHeaders) return;
 
-    try {
-      const res = await fetch(`${API_BASE}/auth/stocks`, { headers: authHeaders });
-      if (!res.ok) throw new Error("Stocks API failed");
-      const data = await res.json();
-      // Filter to unique stocks based on symbol
-      const uniqueStocks = data.filter((stock, index, self) =>
-        self.findIndex(s => s.symbol === stock.symbol) === index
-      );
-      setStocks(uniqueStocks);
-    } catch (err) {
-      console.error(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    const res = await fetch(`${API_BASE}/auth/stocks`, { headers: authHeaders });
+    const data = await res.json();
+
+  const stockMap = new Map();
+    data.forEach(stock => {
+      stockMap.set(stock.symbol, stock);
+    });
+
+    setStocks([...stockMap.values()].slice(0, 10));
+  } catch (err) {
+    console.error(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const fetchStock = async (symbol) => {
     if (!authHeaders) return;
@@ -96,8 +108,20 @@ export default function Watchlist() {
       const res = await fetch(`${API_BASE}/auth/stock/${symbol}`, { headers: authHeaders });
       if (!res.ok) throw new Error("Stock fetch failed");
       const stockData = await res.json();
+      console.log(stockData);
       setSearchedStock(stockData);
       setSelectedStock(symbol);
+      // Add the searched stock to the stocks array for chart inclusion
+      setStocks(prevStocks => {
+        const newStocks = [...prevStocks];
+        const existingIndex = newStocks.findIndex(s => s.symbol === stockData.symbol);
+        if (existingIndex === -1) {
+          newStocks.push(stockData);
+        } else {
+          newStocks[existingIndex] = stockData;
+        }
+        return newStocks.slice(0, 5);
+      });
     } catch (err) {
       console.error(err.message);
       setSearchedStock(null);
@@ -124,7 +148,7 @@ export default function Watchlist() {
     );
   }
 
-  const selectedStockData = stocks.find(stock => stock.symbol === selectedStock);
+  const selectedStockData = stocks.find(stock => stock.symbol == selectedStock);
 
   // Candlestick chart (approximated with bar chart for price history)
   const candlestickChartData = {
@@ -200,6 +224,46 @@ export default function Watchlist() {
     }]
   };
 
+  // Bar chart for searched stock quantities
+  const searchedStockBarData = searchedStock ? {
+    labels: ['Price', 'Change', 'Volume'],
+    datasets: [{
+      label: searchedStock.symbol,
+      data: [
+        searchedStock.price,
+        searchedStock.change,
+        searchedStock.volume / 1000000 // Convert to millions
+      ],
+      backgroundColor: [
+        'rgba(59, 130, 246, 0.8)',
+        searchedStock.change >= 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
+        'rgba(168, 85, 247, 0.8)'
+      ],
+      borderColor: [
+        'rgba(59, 130, 246, 1)',
+        searchedStock.change >= 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)',
+        'rgba(168, 85, 247, 1)'
+      ],
+      borderWidth: 1,
+    }]
+  } : null;
+
+  // Line chart for searched stock price history (if available)
+  const searchedStockLineData = stockHistory.length > 0 ? {
+    labels: stockHistory.slice(0, 10).map(item => item.date),
+    datasets: [{
+      label: `${selectedStock} Price History`,
+      data: stockHistory.slice(0, 10).map(item => item.price),
+      borderColor: 'rgba(59, 130, 246, 1)',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      tension: 0.4,
+      pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2,
+      pointRadius: 4,
+    }]
+  } : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex">
       <div className={`transition-all duration-300 ${isMenuOpen ? 'w-1/3' : 'w-0'} bg-slate-800/50 border-r border-slate-700/50 overflow-hidden`}>
@@ -216,13 +280,19 @@ export default function Watchlist() {
               onClick={() => navigate('/chatgpt')}
               className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
             >
-              ChatGPT
+              Adivsory Platform
             </button>
             <button
               onClick={() => navigate('/watchlist')}
               className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
             >
               Watchlist
+            </button>
+             <button
+              onClick={() => navigate('/tradingview')}
+              className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
+            >
+              Portfolio
             </button>
             <button
               onClick={handleLogout}
@@ -239,14 +309,22 @@ export default function Watchlist() {
           {/* Header */}
           <header className="mb-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 rounded-xl border border-slate-700/50 transition"
+              >
+                {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
               <h1 className="text-3xl font-bold text-slate-50">Stock Watchlist</h1>
             </div>
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 rounded-xl border border-slate-700/50 transition"
-            >
-              {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsStockSliderOpen(!isStockSliderOpen)}
+                className="p-2 bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 rounded-xl border border-slate-700/50 transition"
+              >
+                {isStockSliderOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            </div>
           </header>
           <div className="mb-8">
             <p className="text-slate-400">Select a company to view its data</p>
@@ -315,61 +393,113 @@ export default function Watchlist() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <div className="text-sm text-slate-400">Price</div>
-                <div className="text-2xl font-bold text-slate-50">${(selectedStockData || searchedStock).price?.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-slate-50">${formatNumber((selectedStockData || searchedStock).price)}</div>
               </div>
               <div>
                 <div className="text-sm text-slate-400">Change</div>
-                <div className={`text-xl font-semibold ${(selectedStockData || searchedStock).change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {(selectedStockData || searchedStock).change >= 0 ? '+' : ''}${(selectedStockData || searchedStock).change?.toFixed(2)}
+                <div className={`text-xl font-semibold ${(parseFloat((selectedStockData || searchedStock).change) >= 0) ? 'text-green-400' : 'text-red-400'}`}>
+                  {parseFloat((selectedStockData || searchedStock).change) >= 0 ? '+' : ''}${formatNumber((selectedStockData || searchedStock).change)}
                 </div>
               </div>
               <div>
                 <div className="text-sm text-slate-400">% Change</div>
-                <div className={`text-xl font-semibold ${(selectedStockData || searchedStock).changePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {(selectedStockData || searchedStock).changePercent >= 0 ? '+' : ''}{(selectedStockData || searchedStock).changePercent?.toFixed(2)}%
+                <div className={`text-xl font-semibold ${parseFloat((selectedStockData || searchedStock).changePercent) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {parseFloat((selectedStockData || searchedStock).changePercent) >= 0 ? '+' : ''}{formatNumber((selectedStockData || searchedStock).changePercent)}%
                 </div>
               </div>
               <div>
                 <div className="text-sm text-slate-400">Volume</div>
-                <div className="text-xl font-semibold text-slate-50">{((selectedStockData || searchedStock).volume / 1000000)?.toFixed(1)}M</div>
+                <div className="text-xl font-semibold text-slate-50">{(parseFloat((selectedStockData || searchedStock).volume) / 1000000)?.toFixed(1)}M</div>
               </div>
             </div>
           </div>
         )}
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+          <div className="bg-slate-800/50 rounded-xl p-6 border-2 border-slate-600 shadow-lg">
             <h3 className="text-lg font-semibold text-slate-50 mb-4">Price History (Candlestick Chart)</h3>
-            <div style={{ height: '300px' }}>
+            <div style={{ height: '350px' }}>
               <Bar data={candlestickChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} />
             </div>
           </div>
-          <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-slate-800/50 rounded-xl p-6 border-2 border-slate-600 shadow-lg">
             <h3 className="text-lg font-semibold text-slate-50 mb-4">Price History (Line Chart)</h3>
-            <div style={{ height: '300px' }}>
+            <div style={{ height: '350px' }}>
               <Line data={lineChartData} options={{ responsive: true, maintainAspectRatio: false }} />
             </div>
           </div>
-          <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-slate-800/50 rounded-xl p-6 border-2 border-slate-600 shadow-lg">
             <h3 className="text-lg font-semibold text-slate-50 mb-4">Price History (Area Chart)</h3>
-            <div style={{ height: '300px' }}>
+            <div style={{ height: '350px' }}>
               <Line data={areaChartData} options={{ responsive: true, maintainAspectRatio: false }} />
             </div>
           </div>
-          <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-slate-800/50 rounded-xl p-6 border-2 border-slate-600 shadow-lg">
             <h3 className="text-lg font-semibold text-slate-50 mb-4">Volume Comparison (Bar Chart)</h3>
-            <div style={{ height: '300px' }}>
+            <div style={{ height: '350px' }}>
               <Bar data={volumeComparisonData} options={{ responsive: true, maintainAspectRatio: false }} />
             </div>
           </div>
-          <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div className="bg-slate-800/50 rounded-xl p-6 border-2 border-slate-600 shadow-lg">
             <h3 className="text-lg font-semibold text-slate-50 mb-4">Market Cap Distribution (Pie Chart)</h3>
-            <div style={{ height: '300px' }}>
+            <div style={{ height: '350px' }}>
               <Pie data={marketCapPieData} options={{ responsive: true, maintainAspectRatio: false }} />
             </div>
           </div>
+          {searchedStockBarData && (
+            <div className="bg-slate-800/50 rounded-xl p-6 border-2 border-slate-600 shadow-lg">
+              <h3 className="text-lg font-semibold text-slate-50 mb-4">Searched Stock Quantities (Bar Chart)</h3>
+              <div style={{ height: '350px' }}>
+                <Bar data={searchedStockBarData} options={{ responsive: true, maintainAspectRatio: false }} />
+              </div>
+            </div>
+          )}
+          {searchedStockLineData && (
+            <div className="bg-slate-800/50 rounded-xl p-6 border-2 border-slate-600 shadow-lg">
+              <h3 className="text-lg font-semibold text-slate-50 mb-4">Searched Stock Price History (Line Chart)</h3>
+              <div style={{ height: '350px' }}>
+                <Line data={searchedStockLineData} options={{ responsive: true, maintainAspectRatio: false }} />
+              </div>
+            </div>
+          )}
         </div>
+        </div>
+      </div>
+      {/* Stock Slider */}
+      <div className={`transition-all duration-300 ${isStockSliderOpen ? 'w-64' : 'w-0'} bg-slate-800/50 border-l border-slate-700/50 overflow-hidden`}>
+        <div className="p-6">
+          <h2 className="text-xl font-semibold text-slate-50 mb-4">Stock Symbols</h2>
+          <div className="flex flex-col gap-2">
+            {stocks.map((stock) => (
+              <button
+                key={stock.symbol}
+                onClick={() => setSelectedStock(stock.symbol)}
+                className={`p-3 rounded-xl border transition text-left ${
+                  selectedStock === stock.symbol
+                    ? 'bg-cyan-500 text-slate-950 border-cyan-500'
+                    : 'bg-slate-700/50 text-slate-50 border-slate-600/50 hover:bg-slate-600/50'
+                }`}
+              >
+                <div className="text-sm font-semibold">{stock.symbol}</div>
+                <div className="text-xs text-slate-300">${parseFloat(stock.price)?.toFixed(2) || 'N/A'}</div>
+              </button>
+            ))}
+            {additionalCompanies.map((company) => (
+              <button
+                key={company}
+                onClick={() => fetchStock(company)}
+                className={`p-3 rounded-xl border transition text-left ${
+                  selectedStock === company
+                    ? 'bg-cyan-500 text-slate-950 border-cyan-500'
+                    : 'bg-slate-700/50 text-slate-50 border-slate-600/50 hover:bg-slate-600/50'
+                }`}
+              >
+                <div className="text-sm font-semibold">{company}</div>
+                <div className="text-xs text-slate-300">Click to load</div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

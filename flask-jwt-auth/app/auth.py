@@ -19,6 +19,7 @@ from werkzeug.security import check_password_hash
 from pgvector.sqlalchemy import Vector
 from pgvector.psycopg2 import register_vector
 from sqlalchemy import Column,Integer
+from .RealTimeFetch import fetch_stock_symbol, fetch_single_stock, fetch_highest_gainer, fetch_highest_loser, nse
 
 #setting api
 auth_bp = Blueprint("auth", __name__,url_prefix='/auth')
@@ -176,53 +177,98 @@ def chat():
     })
 
 @auth_bp.route('/stocks', methods=['GET'])
-
 def get_stocks():
-    # Fetch stock data from database
+    # Fetch stock data from database, ensuring unique symbols
     stocks = StockData.query.all()
-    stock_data = [{
-        'symbol': stock.symbol,
-        'name': stock.company,
-        'price': stock.last_traded_price,
-        'change': stock.price_change,
-        'changePercent': stock.percentage_change,
-        'volume': stock.share_volume,
-        'marketCap': stock.value_inr
-    } for stock in stocks]
+    stock_data = []
+    seen_symbols = set()
+    for stock in stocks:
+        if stock.symbol not in seen_symbols:
+            seen_symbols.add(stock.symbol)
+            stock_data.append({
+                'symbol': stock.symbol,
+                'name': stock.company,
+                'price': stock.last_traded_price,
+                'change': stock.price_change,
+                'changePercent': stock.percentage_change,
+                'volume': stock.share_volume,
+                'marketCap': stock.value_inr
+            })
     return jsonify(stock_data)
 
-@auth_bp.route('/stock/<company_name>', methods=['GET'])
-def get_stock_by_company(company_name):
-    # Fetch stock data for the specified company (case-insensitive partial match)
-    stock = StockData.query.filter(StockData.company.ilike(f'%{company_name}%')).first()
-    if not stock:
-        return jsonify({'error': 'Company not found'}), 404
-    stock_data = {
-        'company': stock.company,
-        'symbol': stock.symbol,
-        'industry': stock.industry,
-        'series': stock.series,
-        'open_price': float(stock.open_price),
-        'high_price': float(stock.high_price),
-        'low_price': float(stock.low_price),
-        'previous_close': float(stock.previous_close),
-        'last_traded_price': float(stock.last_traded_price),
-        'price_change': float(stock.price_change),
-        'percentage_change': float(stock.percentage_change),
-        'day_percentage_change': float(stock.day_percentage_change),
-        'share_volume': int(stock.share_volume),
-        'value_inr': float(stock.value_inr),
-        'week_high': float(stock.week_high),
-        'week_low': float(stock.week_low),
-        'daypercentagechange': float(stock.daypercentagechange) if stock.daypercentagechange else None
-    }
-    return jsonify(stock_data)
+@auth_bp.route('/stock/<symbol>', methods=['GET'])
+def get_stock_by_symbol(symbol):
+    # First try to fetch from database
+    stock = StockData.query.filter(StockData.symbol.ilike(f'%{symbol}%')).first()
+    if stock:
+        stock_data = {
+            'name': stock.company,
+            'symbol': stock.symbol,
+            'price': stock.last_traded_price,
+            'change': stock.price_change,
+            'changePercent': stock.percentage_change,
+            'volume': stock.share_volume,
+            'marketCap': stock.value_inr,
+            'industry': stock.industry or 'N/A',
+            'series': stock.series or 'N/A',
+            'open_price': stock.open_price,
+            'high_price': stock.high_price,
+            'low_price': stock.low_price,
+            'previous_close': stock.previous_close,
+            'last_traded_price': stock.last_traded_price,
+            'price_change': stock.price_change,
+            'percentage_change': stock.percentage_change,
+            'day_percentage_change': stock.day_percentage_change,
+            'share_volume': stock.share_volume,
+            'value_inr': stock.value_inr,
+            'week_high': stock.week_high,
+            'week_low': stock.week_low,
+            'daypercentagechange': stock.daypercentagechange
+        }
+        return jsonify(stock_data)
+
+    # If not in database, try real-time NSE data
+    try:
+        stock_quote = nse.get_stock_quote(symbol)
+        if not stock_quote:
+            return jsonify({'error': 'Stock not found'}), 404
+        stock_data = {
+            'name': stock_quote.get('companyName', symbol),
+            'symbol': symbol,
+            'price': stock_quote.get('lastPrice', 0),
+            'change': stock_quote.get('change', 0),
+            'changePercent': stock_quote.get('pChange', 0),
+            'volume': stock_quote.get('totalTradedVolume', 0),
+            'marketCap': stock_quote.get('totalTradedValue', 0),
+            'industry': stock_quote.get('industry', 'N/A'),
+            'series': stock_quote.get('series', 'N/A'),
+            'open_price': stock_quote.get('open', 0),
+            'high_price': stock_quote.get('dayHigh', 0),
+            'low_price': stock_quote.get('dayLow', 0),
+            'previous_close': stock_quote.get('previousClose', 0),
+            'last_traded_price': stock_quote.get('lastPrice', 0),
+            'price_change': stock_quote.get('change', 0),
+            'percentage_change': stock_quote.get('pChange', 0),
+            'day_percentage_change': stock_quote.get('pChange', 0),
+            'share_volume': stock_quote.get('totalTradedVolume', 0),
+            'value_inr': stock_quote.get('totalTradedValue', 0),
+            'week_high': stock_quote.get('weekHigh', 0),
+            'week_low': stock_quote.get('weekLow', 0),
+            'daypercentagechange': stock_quote.get('pChange', 0)
+        }
+        return jsonify(stock_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/stocks/history/<symbol>', methods=['GET'])
-@jwt_required()
 def get_stock_history(symbol):
     import random
-    base_price = 100 + random.randint(50, 200)
+    # Fetch the stock's current price from database
+    stock = StockData.query.filter(StockData.symbol.ilike(f'%{symbol}%')).first()
+    if stock:
+        base_price = float(stock.last_traded_price)
+    else:
+        base_price = 100 + random.randint(50, 200)  # Fallback if not found
     history = []
     for i in range(30):  # Last 30 days
         price = base_price + random.uniform(-20, 20)
@@ -270,6 +316,30 @@ def get_stock_data():
     } for stock in stocks]
     return jsonify(stock_data)
 
+@auth_bp.route('/stock_data/<symbol>', methods=['GET'])
+def get_stock_data_of_particular():
+    from .models import StockData
+    stocks = StockData.query.all()
+    stock_data = [{
+        'company': stock.company,
+        'symbol': stock.symbol,
+        'industry': stock.industry,
+        'series': stock.series,
+        'open_price': float(stock.open_price),
+        'high_price': float(stock.high_price),
+        'low_price': float(stock.low_price),
+        'previous_close': float(stock.previous_close),
+        'last_traded_price': float(stock.last_traded_price),
+        'price_change': float(stock.price_change),
+        'percentage_change': float(stock.percentage_change),
+        'day_percentage_change': float(stock.day_percentage_change),
+        'share_volume': int(stock.share_volume),
+        'value_inr': float(stock.value_inr),
+        'week_high': float(stock.week_high),
+        'week_low': float(stock.week_low),
+        'daypercentagechange': float(stock.daypercentagechange) if stock.daypercentagechange else None
+    } for stock in stocks]
+    return jsonify(stock_data)
 
 # Function to populate sample stock data
 def populate_sample_stocks():

@@ -1,2 +1,0 @@
-- [x] Edit src/pages/Dashboard.jsx to implement sidebar layout
-- [x] Edit src/pages/watchlist.jsx to implement sidebar layout

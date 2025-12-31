@@ -47,3 +47,11 @@ class StockData(db.Model):
     week_low = db.Column(db.Numeric(10, 2), nullable=False)
     daypercentagechange = db.Column(db.Numeric(6, 2), nullable=True)
 
+class Watchlist(db.Model):
+    __tablename__ = 'watchlist'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users_info.id'), nullable=False)
+    symbol = db.Column(db.String(30), nullable=False)
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+
