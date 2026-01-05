@@ -192,7 +192,8 @@ def get_stocks():
                 'change': stock.price_change,
                 'changePercent': stock.percentage_change,
                 'volume': stock.share_volume,
-                'marketCap': stock.value_inr
+                'marketCap': stock.value_inr,
+                'industry': stock.industry or 'Unknown'
             })
     return jsonify(stock_data)
 
@@ -402,14 +403,14 @@ def get_stock_data_of_particular():
 def populate_sample_stocks():
     if StockData.query.count() == 0:  # Only populate if table is empty
         sample_stocks = [
-            StockData(symbol='AAPL', company='Apple Inc.', last_traded_price=175.43, price_change=2.34, percentage_change=1.35, share_volume=45230000, value_inr=2800000000000),
-            StockData(symbol='GOOGL', company='Alphabet Inc.', last_traded_price=138.21, price_change=-1.23, percentage_change=-0.88, share_volume=25670000, value_inr=1750000000000),
-            StockData(symbol='MSFT', company='Microsoft Corporation', last_traded_price=378.85, price_change=5.67, percentage_change=1.52, share_volume=19850000, value_inr=2820000000000),
-            StockData(symbol='AMZN', company='Amazon.com Inc.', last_traded_price=144.05, price_change=-0.89, percentage_change=-0.61, share_volume=38760000, value_inr=1480000000000),
-            StockData(symbol='TSLA', company='Tesla Inc.', last_traded_price=248.42, price_change=12.34, percentage_change=5.23, share_volume=89450000, value_inr=790000000000),
-            StockData(symbol='NVDA', company='NVIDIA Corporation', last_traded_price=875.28, price_change=15.67, percentage_change=1.82, share_volume=41230000, value_inr=2150000000000),
-            StockData(symbol='META', company='Meta Platforms Inc.', last_traded_price=484.10, price_change=-8.92, percentage_change=-1.81, share_volume=15670000, value_inr=1230000000000),
-            StockData(symbol='NFLX', company='Netflix Inc.', last_traded_price=442.57, price_change=7.89, percentage_change=1.81, share_volume=5234000, value_inr=192000000000),
+            StockData(symbol='AAPL', company='Apple Inc.', last_traded_price=175.43, price_change=2.34, percentage_change=1.35, share_volume=45230000, value_inr=2800000000000, industry='Technology'),
+            StockData(symbol='GOOGL', company='Alphabet Inc.', last_traded_price=138.21, price_change=-1.23, percentage_change=-0.88, share_volume=25670000, value_inr=1750000000000, industry='Technology'),
+            StockData(symbol='MSFT', company='Microsoft Corporation', last_traded_price=378.85, price_change=5.67, percentage_change=1.52, share_volume=19850000, value_inr=2820000000000, industry='Technology'),
+            StockData(symbol='AMZN', company='Amazon.com Inc.', last_traded_price=144.05, price_change=-0.89, percentage_change=-0.61, share_volume=38760000, value_inr=1480000000000, industry='E-commerce'),
+            StockData(symbol='TSLA', company='Tesla Inc.', last_traded_price=248.42, price_change=12.34, percentage_change=5.23, share_volume=89450000, value_inr=790000000000, industry='Automotive'),
+            StockData(symbol='NVDA', company='NVIDIA Corporation', last_traded_price=875.28, price_change=15.67, percentage_change=1.82, share_volume=41230000, value_inr=2150000000000, industry='Technology'),
+            StockData(symbol='META', company='Meta Platforms Inc.', last_traded_price=484.10, price_change=-8.92, percentage_change=-1.81, share_volume=15670000, value_inr=1230000000000, industry='Technology'),
+            StockData(symbol='NFLX', company='Netflix Inc.', last_traded_price=442.57, price_change=7.89, percentage_change=1.81, share_volume=5234000, value_inr=192000000000, industry='Entertainment'),
         ]
         db.session.add_all(sample_stocks)
         db.session.commit()

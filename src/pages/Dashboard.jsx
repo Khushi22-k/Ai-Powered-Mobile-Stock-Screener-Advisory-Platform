@@ -258,6 +258,28 @@ useEffect(() => {
     }]
   };
 
+  const industryInvestment = stocks.reduce((acc, stock) => {
+    const industry = stock.industry || 'Unknown';
+    if (!acc[industry]) {
+      acc[industry] = { totalCap: 0, count: 0 };
+    }
+    acc[industry].totalCap += stock.marketCap || 0;
+    acc[industry].count += 1;
+    return acc;
+  }, {});
+
+  const industryDonutData = {
+    labels: Object.keys(industryInvestment).map(industry => `${industry} (${industryInvestment[industry].count} stocks)`),
+    datasets: [{
+      data: Object.values(industryInvestment).map(d => d.totalCap / 1000000000000), // trillions
+      backgroundColor: [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0' // add more if needed
+      ],
+    }]
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex">
       <div className={`transition-all duration-300 ${isMenuOpen ? 'w-1/3' : 'w-0'} bg-slate-800/50 border-r border-slate-700/50 overflow-hidden`}>
@@ -391,7 +413,7 @@ useEffect(() => {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
           <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
             <h3 className="text-lg font-semibold text-slate-50 mb-4">Stock Prices</h3>
             <Bar data={priceChartData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
@@ -404,7 +426,10 @@ useEffect(() => {
             <h3 className="text-lg font-semibold text-slate-50 mb-4">Market Cap Distribution</h3>
             <Pie data={marketCapChartData} options={{ responsive: true }} />
           </div>
-         
+          <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+            <h3 className="text-lg font-semibold text-slate-50 mb-4">Industry Investment Distribution (Total Stocks: {stocks.length})</h3>
+            <Doughnut data={industryDonutData} options={{ responsive: true }} />
+          </div>
         </div>
 
 

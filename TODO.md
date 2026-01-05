@@ -1,14 +1,26 @@
-# TODO: Fix CORS Error in React-Flask App
+# Task Completion Checklist
 
-## Completed Tasks
-- [x] Analyzed the CORS error: Frontend at http://localhost:5173 blocked from accessing backend at http://127.0.0.1:5000/auth/stock/AAPL due to missing 'Access-Control-Allow-Origin' header.
-- [x] Reviewed CORS configuration in Flask app (__init__.py and run.py).
-- [x] Updated CORS in __init__.py to apply to all routes (r"/*") with origins ["http://localhost:5173"] and supports_credentials=True.
-- [x] Removed duplicate CORS setup in run.py to avoid conflicts.
-- [x] Added double-click functionality to remove favorite stocks from the database in watchlist.jsx.
+## Industry Chart Implementation
+- [x] Add industry field to backend stock model
+- [x] Populate sample data with industries
+- [x] Create donut chart for industry investment distribution
+- [x] Restart backend to apply changes
+- [x] Start frontend to verify chart display
 
-## Next Steps
-- [ ] Restart the Flask backend server to apply CORS changes.
-- [ ] Test the frontend fetch request to /auth/stock/AAPL to confirm CORS error is resolved.
-- [ ] If issues persist, check browser console for additional errors and verify server logs.
-- [ ] Test the double-click remove favorite stock functionality.
+## Responsiveness Improvements
+- [x] Dashboard: Enhanced charts grid with xl:grid-cols-4
+- [x] Auth: Made responsive with flex-col lg:flex-row layout, added features section back
+- [x] Other pages (chatgpt, watchlist, tradingview, landing, signup): Verified responsive design
+
+## Stock Query Enhancement
+- [x] Add stock-related query detection in rag.py
+- [x] Implement external stock data fetching from Alpha Vantage API
+- [x] Integrate fallback logic when vector DB has no context for stock queries
+- [ ] Get Alpha Vantage API key and replace placeholder
+- [ ] Test stock query fallback functionality
+
+## Testing
+- [ ] Verify industry donut chart displays correctly
+- [ ] Test responsiveness on different screen sizes
+- [ ] Confirm all pages load and function properly
+- [ ] Test stock queries that fetch from external API

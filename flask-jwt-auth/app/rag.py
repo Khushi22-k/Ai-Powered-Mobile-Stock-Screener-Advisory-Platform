@@ -26,3 +26,6 @@ def retrieve_context(query, k=5):
         return "\n".join([r[0] for r in rows])
     finally:
         conn.close()
+"""Fetch stock data from external source"""
+# def fetch_data_from_source(query):
+        

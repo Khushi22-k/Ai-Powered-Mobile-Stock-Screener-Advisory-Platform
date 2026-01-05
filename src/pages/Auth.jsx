@@ -48,20 +48,6 @@ function Feature({ title, description }) {
   );
 }
 
-const featureCards = [
-  {
-    title: 'AI-Driven Insights',
-    description: 'Advanced algorithms analyze market patterns to surface high-conviction ideas.',
-  },
-  {
-    title: 'Real-Time Screening',
-    description: 'Filter stocks instantly across 100+ fundamental, technical, and sentiment factors.',
-  },
-  {
-    title: 'Smart Recommendations',
-    description: 'Personalized picks and alerts aligned with your risk profile and goals.',
-  },
-];
 
 export default function Auth({ mode = "signin" }) {
   const isSignIn = mode === "signin";
@@ -122,10 +108,24 @@ export default function Auth({ mode = "signin" }) {
      };
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-10">
-      <div className="w-full max-w-6xl flex items-center justify-center">
+      <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center justify-center gap-8">
         {/* Left Side - Features */}
+        <section className="hidden lg:flex items-center">
+          <div className="w-[400px] h-[500px] rounded-[1.75rem] border border-slate-800 bg-slate-950/85 p-6 shadow-2xl shadow-black/50 overflow-auto flex flex-col items-center justify-center">
+            <div className="mb-6">
+              <Logo />
+            </div>
+            <div className="space-y-4">
+              {featureCards.map((feature, index) => (
+                <Feature key={index} title={feature.title} description={feature.description} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Right Side - Auth Form */}
         <section className="flex items-center">
-          <div className="w-[600px] h-[600px] rounded-[1.75rem] border border-slate-800 bg-slate-950/85 p-6 shadow-2xl shadow-black/50 sm:p-8 overflow-auto flex flex-col items-center justify-center">
+          <div className="w-full max-w-md lg:w-[400px] h-auto lg:h-[500px] rounded-[1.75rem] border border-slate-800 bg-slate-950/85 p-6 shadow-2xl shadow-black/50 sm:p-8 overflow-auto flex flex-col items-center justify-center">
             <div className="mb-8 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-semibold text-slate-50">
