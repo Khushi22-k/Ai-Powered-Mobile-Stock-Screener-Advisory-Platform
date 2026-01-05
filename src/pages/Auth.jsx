@@ -97,6 +97,23 @@ export default function Auth({ mode = "signin" }) {
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("username", data.username);
 
+      const res1= await fetch("http://localhost:5000/auth/favorite-stocks", {
+        method:'GET',
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${data.access_token}`,
+          body: JSON.stringify({favorite_stocks: []}),
+        },
+      });
+      
+      const data1 = await res1.json();
+      console.log("Response:", data1);
+
+      if (!res1.ok) {
+        setError(data.message || "failed to fetch favorite stocks");
+        return;
+      }
+
     // ✅ 2. Redirect
     navigate("/dashboard");
   } catch (err) {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
 import { TrendingUp, TrendingDown, DollarSign, Activity, Menu, X, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {Star} from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -23,8 +24,73 @@ useEffect(() => {
   const [selectedStock, setSelectedStock] = useState('AAPL');
   const [stockHistory, setStockHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [favoriteStocks, setFavoriteStocks] = useState([]);
+  const [favoriteSymbols, setFavoriteSymbols] = useState([]);
+  const [lastClickTime, setLastClickTime] = useState({});
 
   const API_BASE = 'http://127.0.0.1:5000';
+
+  const handleStarClick = (symbol) => {
+    const now = Date.now();
+    const lastClick = lastClickTime[symbol] || 0;
+    const timeDiff = now - lastClick;
+
+    if (timeDiff < 300) { // Double click within 300ms
+      removeFavorite(symbol);
+      setLastClickTime(prev => ({ ...prev, [symbol]: 0 }));
+    } else {
+      setLastClickTime(prev => ({ ...prev, [symbol]: now }));
+      setTimeout(() => {
+        const currentTime = Date.now();
+        if (currentTime - (lastClickTime[symbol] || 0) >= 300) {
+          addFavorite(symbol);
+        }
+      }, 300);
+    }
+  };
+
+   const addFavorite = async (symbol) => {
+    const isCurrentlyFavorite = favoriteSymbols.includes(symbol.toUpperCase());
+
+    if (isCurrentlyFavorite) return; // Already favorite, do nothing
+
+    try {
+      console.log("Adding favorite stock:", symbol);
+
+      await fetch(`${API_BASE}/auth/favorite-stock`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ symbol: symbol, status: "selected" }),
+      });
+      console.log("send from frontend")
+
+      // Refresh favorite stocks after add
+      fetchFavoriteStocks();
+    } catch (err) {
+      console.error("Failed to add favorite stock", err);
+    }
+   };
+
+   const removeFavorite = async (symbol) => {
+    const isCurrentlyFavorite = favoriteSymbols.includes(symbol.toUpperCase());
+
+    if (!isCurrentlyFavorite) return; // Not favorite, do nothing
+
+    try {
+      console.log("Removing favorite stock:", symbol);
+
+      await fetch(`${API_BASE}/auth/favorite-stock`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ symbol: symbol, status: "unselected" }),
+      });
+      console.log("send from frontend")
+      // Refresh favorite stocks after remove
+      fetchFavoriteStocks();
+    } catch (err) {
+      console.error("Failed to remove favorite stock", err);
+    }
+   };
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
@@ -35,6 +101,7 @@ useEffect(() => {
 
   useEffect(() => {
     fetchData();
+    fetchFavoriteStocks();
     const interval = setInterval(fetchData, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
   }, []);
@@ -68,6 +135,39 @@ useEffect(() => {
   }
 };
 
+
+  const fetchFavoriteStocks = async () => {
+    if (!authHeaders) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/favorite-stocks`, { headers: authHeaders });
+      if (!res.ok) throw new Error("Favorite stocks fetch failed");
+      const data = await res.json();
+
+      // Filter only selected favorites
+      const selectedFavorites = data.filter(fav => fav.status === 'selected');
+
+      // Fetch full stock data for each favorite
+      const favoriteStockData = [];
+      for (const fav of selectedFavorites) {
+        try {
+          const stockRes = await fetch(`${API_BASE}/auth/stock/${fav.symbol}`, { headers: authHeaders });
+          if (stockRes.ok) {
+            const stockData = await stockRes.json();
+            favoriteStockData.push(stockData);
+          }
+        } catch (err) {
+          console.error(`Failed to fetch stock data for ${fav.symbol}:`, err);
+        }
+      }
+
+      setFavoriteStocks(favoriteStockData);
+      setFavoriteSymbols(selectedFavorites.map(fav => fav.symbol.toUpperCase()));
+      console.log('favoriteStocks:', favoriteStockData);
+    } catch (err) {
+      console.error('Failed to fetch favorite stocks:', err);
+    }
+  };
 
   const fetchStockHistory = async (symbol) => {
     if(!authHeaders) return;
@@ -341,7 +441,7 @@ useEffect(() => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Change</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">% Change</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Volume</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Market Cap</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Favorites</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
@@ -369,9 +469,19 @@ useEffect(() => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-slate-50">{stock.volume != null ? (parseFloat(stock.volume) / 1000000).toFixed(1) : 'N/A'}M</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-slate-50">${stock.marketCap != null ? (parseFloat(stock.marketCap) / 1000000000000).toFixed(1) : 'N/A'}T</div>
-                    </td>
+                                   <td className="px-6 py-4 whitespace-nowrap text-center">
+  <Star
+    size={20}
+    onClick={() => addFavorite(stock.symbol)}
+    onDoubleClick={() => removeFavorite(stock.symbol)}
+    className={`cursor-pointer transition ${
+      favoriteSymbols.includes(stock.symbol.toUpperCase())
+        ? "fill-yellow-400 text-yellow-400"
+        : "text-gray-400"
+    }`}
+  />
+</td>
+
                   </tr>
                 ))}
               </tbody>
@@ -382,4 +492,4 @@ useEffect(() => {
       </div>
     </div>
   );
-}
+};

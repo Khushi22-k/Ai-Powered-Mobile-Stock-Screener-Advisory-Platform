@@ -28,7 +28,7 @@ function App() {
         <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/signin" />} />
         <Route path="/chatgpt" element={isAuthenticated ? <Chatgpt /> : <Navigate to="/signin" />} />
         <Route path="/watchlist" element={isAuthenticated ? <Watchlist /> : <Navigate to="/signin" />} />
-        <Route path="/tradingview" element={isAuthenticated ? <TradingViewWidget /> : <Navigate to="/signin" />} />
+        <Route path="/tradingview/:symbol" element={isAuthenticated ? <TradingViewWidget /> : <Navigate to="/signin" />} />
       </Routes>
     </div>
   );

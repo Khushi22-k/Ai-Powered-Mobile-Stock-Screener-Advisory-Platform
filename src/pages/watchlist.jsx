@@ -12,7 +12,7 @@ import {
   ArcElement,
 } from 'chart.js';
 import { Line, Bar, Pie } from 'react-chartjs-2';
-import { TrendingUp, TrendingDown, Menu, X, LogOut } from 'lucide-react';
+import { TrendingUp, TrendingDown, Menu, X, LogOut, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 ChartJS.register(
@@ -44,6 +44,8 @@ export default function Watchlist() {
   } : null;
 
   const [stocks, setStocks] = useState([]);
+  const [favoriteStocks, setFavoriteStocks] = useState([]);
+  const [favoriteSymbols, setFavoriteSymbols] = useState([]);
   const [selectedStock, setSelectedStock] = useState('AAPL');
   const [stockHistory, setStockHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,14 +67,14 @@ export default function Watchlist() {
 };
 
 
-  // Hardcoded companies for boxes
-  const companies = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN'];
+  // Companies for boxes (use favorites if available, else hardcoded)
+  const companies = favoriteStocks.length > 0 ? favoriteStocks.map(stock => stock.symbol) : ['TCS', 'INFY', 'RELIANCE'];
 
-  // Additional companies for the stock slider
-  const additionalCompanies = ['NVDA', 'META', 'NFLX', 'GOOG', 'ORCL', 'IBM', 'INTC', 'AMD', 'CRM', 'ADBE'];
+  
 
   useEffect(() => {
     fetchStocks();
+    fetchFavoriteStocks();
   }, []);
 
   useEffect(() => {
@@ -100,6 +102,39 @@ export default function Watchlist() {
     setLoading(false);
   }
 };
+
+  const fetchFavoriteStocks = async () => {
+    if (!authHeaders) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/favorite-stocks`, { headers: authHeaders });
+      if (!res.ok) throw new Error("Favorite stocks fetch failed");
+      const data = await res.json();
+
+      // Filter only selected favorites
+      const selectedFavorites = data.filter(fav => fav.status === 'selected');
+
+      // Fetch full stock data for each favorite
+      const favoriteStockData = [];
+      for (const fav of selectedFavorites) {
+        try {
+          const stockRes = await fetch(`${API_BASE}/auth/stock/${fav.symbol}`, { headers: authHeaders });
+          if (stockRes.ok) {
+            const stockData = await stockRes.json();
+            favoriteStockData.push(stockData);
+          }
+        } catch (err) {
+          console.error(`Failed to fetch stock data for ${fav.symbol}:`, err);
+        }
+      }
+
+      setFavoriteStocks(favoriteStockData);
+      setFavoriteSymbols(selectedFavorites.map(fav => fav.symbol.toUpperCase()));
+      console.log('favoriteStocks:', favoriteStockData);
+    } catch (err) {
+      console.error('Failed to fetch favorite stocks:', err);
+    }
+  };
 
 
   const fetchStock = async (symbol) => {
@@ -140,6 +175,42 @@ export default function Watchlist() {
     }
   };
 
+  const toggleFavorite = async (symbol) => {
+    if (!authHeaders) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/favorite-stock`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ symbol })
+      });
+      if (!res.ok) throw new Error("Toggle favorite failed");
+
+      // Refresh favorite stocks after toggle
+      fetchFavoriteStocks();
+    } catch (err) {
+      console.error('Failed to toggle favorite:', err);
+    }
+  };
+
+  const removeFavorite = async (symbol) => {
+    if (!authHeaders) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/favorite-stock`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ symbol, status: "unselected" })
+      });
+      if (!res.ok) throw new Error("Remove favorite failed");
+
+      // Refresh favorite stocks after removal
+      fetchFavoriteStocks();
+    } catch (err) {
+      console.error('Failed to remove favorite:', err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
@@ -167,34 +238,56 @@ export default function Watchlist() {
   // Line chart for price history
   const lineChartData = {
     labels: stockHistory.slice(0, 10).map(item => item.date),
-    datasets: [{
-      label: 'Price',
-      data: stockHistory.slice(0, 10).map(item => item.price),
-      borderColor: 'rgba(59, 130, 246, 1)',
-      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-      tension: 0.4,
-      pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-      pointBorderColor: '#ffffff',
-      pointBorderWidth: 2,
-      pointRadius: 4,
-    }]
+    datasets: [
+      {
+        label: 'Price',
+        data: stockHistory.slice(0, 10).map(item => item.price),
+        borderColor: 'rgba(59, 130, 246, 1)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        tension: 0.4,
+        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+      },
+      {
+        label: 'Week Low',
+        data: Array(10).fill((selectedStockData || searchedStock)?.week_low),
+        borderColor: 'rgba(239, 68, 68, 1)',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        tension: 0,
+        pointRadius: 0,
+        borderDash: [5, 5],
+      }
+    ]
   };
 
   // Area chart (filled line) for price history
   const areaChartData = {
     labels: stockHistory.slice(0, 10).map(item => item.date),
-    datasets: [{
-      label: 'Price',
-      data: stockHistory.slice(0, 10).map(item => item.price),
-      borderColor: 'rgba(34, 197, 94, 1)',
-      backgroundColor: 'rgba(34, 197, 94, 0.3)',
-      tension: 0.4,
-      fill: true,
-      pointBackgroundColor: 'rgba(34, 197, 94, 1)',
-      pointBorderColor: '#ffffff',
-      pointBorderWidth: 2,
-      pointRadius: 4,
-    }]
+    datasets: [
+      {
+        label: 'Price',
+        data: stockHistory.slice(0, 10).map(item => item.price),
+        borderColor: 'rgba(34, 197, 94, 1)',
+        backgroundColor: 'rgba(34, 197, 94, 0.3)',
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: 'rgba(34, 197, 94, 1)',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+      },
+      {
+        label: 'Week High',
+        data: Array(10).fill((selectedStockData || searchedStock)?.week_high),
+        borderColor: 'rgba(34, 197, 94, 1)',
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        tension: 0,
+        pointRadius: 0,
+        borderDash: [5, 5],
+      }
+    ]
   };
 
   // Bar chart for volume comparison
@@ -232,7 +325,7 @@ export default function Watchlist() {
       data: [
         searchedStock.price,
         searchedStock.change,
-        searchedStock.volume / 1000000 // Convert to millions
+        searchedStock.volume / 10000 // Convert to millions
       ],
       backgroundColor: [
         'rgba(59, 130, 246, 0.8)',
@@ -334,9 +427,9 @@ export default function Watchlist() {
         <div className="mb-8">
           <h2 className="text-2xl font-semibold text-slate-50 mb-4">Quick Watchlist</h2>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {stocks.slice(0, 5).map((stock) => (
-              <div key={stock.symbol} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 hover:bg-slate-700/70 transition cursor-pointer" onClick={() => setSelectedStock(stock.symbol)}>
-                <div className="text-lg font-semibold text-slate-50">{stock.symbol}</div>
+            {(favoriteStocks.length > 0 ? favoriteStocks : stocks.slice(0, 5)).map((stock) => (
+              <div key={stock.symbol} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 hover:bg-slate-700/70 transition cursor-pointer" onClick={() => fetchStock(stock.symbol)} onDoubleClick={() => removeFavorite(stock.symbol)}>
+                <div className="text-lg font-semibold text-slate-50 mb-2">{stock.symbol}</div>
                 <div className="text-2xl font-bold text-slate-50">${parseFloat(stock.price)?.toFixed(2) || 'N/A'}</div>
                 <div className={`text-sm ${parseFloat(stock.change) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {parseFloat(stock.change) >= 0 ? '+' : ''}${parseFloat(stock.change)?.toFixed(2) || '0.00'} ({parseFloat(stock.changePercent)?.toFixed(2) || '0.00'}%)
@@ -396,9 +489,25 @@ export default function Watchlist() {
                 <div className="text-2xl font-bold text-slate-50">${formatNumber((selectedStockData || searchedStock).price)}</div>
               </div>
               <div>
+                <div className="text-sm text-slate-400">Industry</div>
+                <div className="text-2xl font-bold text-slate-50">{((selectedStockData || searchedStock).industry)}</div>
+              </div>
+              <div>
                 <div className="text-sm text-slate-400">Change</div>
                 <div className={`text-xl font-semibold ${(parseFloat((selectedStockData || searchedStock).change) >= 0) ? 'text-green-400' : 'text-red-400'}`}>
                   {parseFloat((selectedStockData || searchedStock).change) >= 0 ? '+' : ''}${formatNumber((selectedStockData || searchedStock).change)}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-400">Week_high</div>
+                <div className={`text-xl font-semibold ${(parseFloat((selectedStockData || searchedStock).week_high) >= 0) ? 'text-green-400' : 'text-red-400'}`}>
+                  {parseFloat((selectedStockData || searchedStock).change) >= 0 ? '+' : ''}${formatNumber((selectedStockData || searchedStock).week_high)}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-400">Week_low</div>
+                <div className={`text-xl font-semibold ${(parseFloat((selectedStockData || searchedStock).week_low) >= 0) ? 'text-green-400' : 'text-red-400'}`}>
+                  {parseFloat((selectedStockData || searchedStock).change) >= 0 ? '+' : ''}${formatNumber((selectedStockData || searchedStock).week_low)}
                 </div>
               </div>
               <div>
@@ -474,7 +583,7 @@ export default function Watchlist() {
             {stocks.map((stock) => (
               <button
                 key={stock.symbol}
-                onClick={() => setSelectedStock(stock.symbol)}
+                onClick={() => navigate(`/tradingview/${stock.symbol}`)}
                 className={`p-3 rounded-xl border transition text-left ${
                   selectedStock === stock.symbol
                     ? 'bg-cyan-500 text-slate-950 border-cyan-500'
@@ -485,20 +594,7 @@ export default function Watchlist() {
                 <div className="text-xs text-slate-300">${parseFloat(stock.price)?.toFixed(2) || 'N/A'}</div>
               </button>
             ))}
-            {additionalCompanies.map((company) => (
-              <button
-                key={company}
-                onClick={() => fetchStock(company)}
-                className={`p-3 rounded-xl border transition text-left ${
-                  selectedStock === company
-                    ? 'bg-cyan-500 text-slate-950 border-cyan-500'
-                    : 'bg-slate-700/50 text-slate-50 border-slate-600/50 hover:bg-slate-600/50'
-                }`}
-              >
-                <div className="text-sm font-semibold">{company}</div>
-                <div className="text-xs text-slate-300">Click to load</div>
-              </button>
-            ))}
+           
           </div>
         </div>
       </div>

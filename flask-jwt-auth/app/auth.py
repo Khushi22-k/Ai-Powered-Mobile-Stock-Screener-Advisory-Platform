@@ -159,6 +159,7 @@ def signin():
         "username": user.username
 
       })
+
 @auth_bp.route('/chat', methods=['POST'])
 def chat():
     data=request.get_json()
@@ -194,6 +195,96 @@ def get_stocks():
                 'marketCap': stock.value_inr
             })
     return jsonify(stock_data)
+
+
+@auth_bp.route('/favorite-stock', methods=['POST', 'OPTIONS'])
+@jwt_required()
+def set_favorite_stock():
+    if request.method == "OPTIONS":
+        return jsonify({"msg": "CORS OK"}), 200
+    user_id = get_jwt_identity()
+    data = request.get_json()
+    symbol = data.get("symbol")
+    status = data.get("status")
+    print("Received data:", data)  # Debugging line
+
+    if not symbol:
+        return jsonify({"error": "Stock symbol is required"}), 400
+
+    # Fetch user from database using user_id
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    email_id = user.email
+
+    # Use a new connection for this operation
+    conn_local = psycopg2.connect(
+        host="localhost",
+        database="postgres",
+        user="postgres",
+        password="1234",
+        port="5432"
+    )
+
+    try:
+        with conn_local.cursor() as cur:
+            if status == "selected":
+                # Insert or update to selected
+                cur.execute(
+                    """
+                    INSERT INTO watchlist_selected_item_history (email_id, symbol_name, status, selected_at)
+                    VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+                   
+                    """,
+                    (email_id, symbol, status)
+                )
+            elif status == "unselected":
+                # Delete the entry
+                cur.execute(
+                    """
+                    DELETE FROM watchlist_selected_item_history
+                    WHERE email_id = %s AND symbol_name = %s
+                    """,
+                    (email_id, symbol)
+                )
+            conn_local.commit()
+    except Exception as e:
+        conn_local.rollback()
+        print(f"Database error: {e}")  # Add logging for debugging
+        return jsonify({"error": f"Database error occurred: {str(e)}"}), 500
+    finally:
+        conn_local.close()
+
+    return jsonify({"message": "Favorite stock updated successfully"}), 200
+
+
+@auth_bp.route('/favorite-stocks', methods=['GET'])
+@jwt_required()
+def get_favorite_stocks():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    email_id = user.email
+
+    # Rollback any aborted transaction to clear the connection state
+    conn.rollback()
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT symbol_name, status FROM watchlist_selected_item_history
+            WHERE email_id = %s
+            """,
+            (email_id,)
+        )
+        rows = cur.fetchall()
+
+    favorite_stocks = [{"symbol": row[0], "status": row[1]} for row in rows]
+    return jsonify(favorite_stocks), 200
+
 
 @auth_bp.route('/stock/<symbol>', methods=['GET'])
 def get_stock_by_symbol(symbol):

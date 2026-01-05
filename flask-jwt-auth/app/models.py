@@ -48,10 +48,11 @@ class StockData(db.Model):
     daypercentagechange = db.Column(db.Numeric(6, 2), nullable=True)
 
 class Watchlist(db.Model):
-    __tablename__ = 'watchlist'
+    __tablename__ = 'watchlist_selected_item_history'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users_info.id'), nullable=False)
-    symbol = db.Column(db.String(30), nullable=False)
-    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+    email_id = db.Column(db.String(200), db.ForeignKey('users_info.email'), nullable=False)
+    symbol_name = db.Column(db.String(30), nullable=False)
+    status = db.Column(db.String(10), nullable=False)
+    selected_at = db.Column(db.DateTime, default=datetime.utcnow)
 
