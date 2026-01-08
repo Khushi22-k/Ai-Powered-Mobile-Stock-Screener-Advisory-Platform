@@ -3,6 +3,8 @@ import json
 from psycopg2 import connect
 import psycopg2
 import os
+import smtplib
+from email.mime.text import MIMEText
 from .llm import call_ai_model
 import uuid
 from tqdm import tqdm
@@ -23,7 +25,7 @@ from sqlalchemy import Column,Integer
 #setting api
 auth_bp = Blueprint("auth", __name__,url_prefix='/auth')
 
-
+MARKET_API_KEY = os.getenv("MARKET_STACK_API_KEY", "your_api_key_here")  # Add fallback for testing
 # SQLAlchemy engine
 engine = create_engine(Config.SQLALCHEMY_DATABASE_URI, future=True)
 
@@ -127,6 +129,35 @@ def store_user_message(message: str):
     # 6️⃣ Return embedding & response if needed
     return embedding, response
 
+#send verification email
+def send_email_verification():
+    data = request.get_json()
+    email = data.get("email")
+    sender_email = "freeapiacc97@gmail.com"
+    password = "wijy eadx meep fxly"
+
+    msg = MIMEText("Hello! This is a confirmation email that you have successfully created an account in AI-Powered Stock Screener and Advisory platform.")
+    msg['Subject'] = "Successful Account Creation"
+    msg['From'] = sender_email
+    msg['To'] = email
+    print("here")
+
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(sender_email, password)
+        server.sendmail(sender_email, email, msg.as_string())
+        server.quit()
+        print("Email sent successfully!")
+        return True
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        return False
+
+
+    return jsonify({"message": f"Verification email sent to {email}"}), 200
+
+
 #login
 @auth_bp.route('/login',methods=['POST'])
 def signin():
@@ -224,6 +255,7 @@ def set_favorite_stock():
         host="localhost",
         database="postgres",
         user="postgres",
+
         password="1234",
         port="5432"
     )
@@ -259,6 +291,110 @@ def set_favorite_stock():
 
     return jsonify({"message": "Favorite stock updated successfully"}), 200
 
+
+
+@auth_bp.route("/api/chart", methods=["POST"])
+def chart():
+    body = request.json
+    symbol = body["symbol"]
+    limit = body["limit"]
+    data_type = body["type"]
+
+    # Check if API key is available - if not, use mock data for testing
+    if not MARKET_API_KEY or MARKET_API_KEY == "your_api_key_here":
+        print("Using mock data for testing - API key not configured")
+        return get_mock_chart_data(symbol, limit, data_type)
+
+    if data_type == "intraday":
+        url = f"https://api.marketstack.com/v2/tickers/{symbol}/intraday"
+    else:
+        url = f"https://api.marketstack.com/v2/tickers/{symbol}/eod"
+
+    params = {
+        "access_key": MARKET_API_KEY,
+        "limit": limit,
+        "sort": "DESC"
+    }
+
+    try:
+        res = requests.get(url, params=params, timeout=10)
+
+        if res.status_code != 200:
+            return jsonify({
+                "error": f"MarketStack API error: {res.status_code}",
+                "message": res.text
+            }), res.status_code
+
+        data = res.json()
+        print(f"API Response for {symbol}: {data}")
+
+        # Check if we have valid data
+        if "data" not in data or not data["data"]:
+            return jsonify({
+                "error": "No data available",
+                "message": f"No chart data found for symbol {symbol}"
+            }), 404
+
+        return jsonify(data)
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({
+            "error": "API request failed",
+            "message": str(e)
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "error": "Unexpected error",
+            "message": str(e)
+        }), 500
+
+def get_mock_chart_data(symbol, limit, data_type):
+    """Generate mock chart data for testing purposes"""
+    import random
+    from datetime import datetime, timedelta
+
+    # Base price for the symbol
+    base_prices = {
+        "AAPL": 175.0,
+        "GOOGL": 140.0,
+        "MSFT": 380.0,
+        "TSLA": 250.0,
+        "NVDA": 880.0
+    }
+
+    base_price = base_prices.get(symbol.upper(), 100.0)
+
+    # Generate mock data
+    data = []
+    current_date = datetime.now()
+
+    for i in range(limit):
+        # Generate realistic OHLC data
+        volatility = 0.02  # 2% daily volatility
+        open_price = base_price + random.uniform(-volatility, volatility) * base_price
+        high_price = open_price + abs(random.gauss(0, volatility * base_price))
+        low_price = open_price - abs(random.gauss(0, volatility * base_price))
+        close_price = random.uniform(low_price, high_price)
+
+        # Update base price for next day
+        base_price = close_price
+
+        # Format date
+        if data_type == "intraday":
+            date_str = (current_date - timedelta(minutes=i*5)).strftime("%Y-%m-%dT%H:%M:%S+0000")
+        else:
+            date_str = (current_date - timedelta(days=i)).strftime("%Y-%m-%dT00:00:00+0000")
+
+        data.append({
+            "date": date_str,
+            "open": round(open_price, 2),
+            "high": round(high_price, 2),
+            "low": round(low_price, 2),
+            "close": round(close_price, 2),
+            "volume": random.randint(1000000, 10000000)
+        })
+
+    return jsonify({"data": data})
 
 @auth_bp.route('/favorite-stocks', methods=['GET'])
 @jwt_required()

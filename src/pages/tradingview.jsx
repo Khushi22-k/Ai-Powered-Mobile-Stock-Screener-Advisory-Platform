@@ -9,6 +9,7 @@ function TradingViewWidget() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [favoriteStocks, setFavoriteStocks] = useState([]);
   const { symbol } = useParams();
+  const API_BASE = 'http://127.0.0.1:5000';
   useEffect(() => {
     if (!token) {
       navigate("/login");
@@ -70,6 +71,12 @@ function TradingViewWidget() {
   };
   useEffect(
     () => {
+      // Clean up existing script
+      const existingScript = container.current.querySelector('script');
+      if (existingScript) {
+        existingScript.remove();
+      }
+
       const script = document.createElement("script");
       script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
       script.type = "text/javascript";
@@ -88,7 +95,7 @@ function TradingViewWidget() {
           "locale": "en",
           "save_image": true,
           "style": "1",
-          "symbol": "NASDAQ:AAPL",
+          "symbol": "NSE:${symbol || 'AAPL'}",
           "theme": "dark",
           "timezone": "Etc/UTC",
           "backgroundColor": "#ffffff",
@@ -125,7 +132,7 @@ function TradingViewWidget() {
         }`;
       container.current.appendChild(script);
     },
-    []
+    [symbol]
   );
  
 

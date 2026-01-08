@@ -583,7 +583,7 @@ export default function Watchlist() {
             {stocks.map((stock) => (
               <button
                 key={stock.symbol}
-                onClick={() => navigate(`/tradingview/${stock.symbol}`)}
+                onClick={() => navigate(`/CandlestickChart/${stock.symbol}`)}
                 className={`p-3 rounded-xl border transition text-left ${
                   selectedStock === stock.symbol
                     ? 'bg-cyan-500 text-slate-950 border-cyan-500'

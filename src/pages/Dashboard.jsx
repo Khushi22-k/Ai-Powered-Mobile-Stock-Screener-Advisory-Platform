@@ -308,7 +308,7 @@ useEffect(() => {
               onClick={() => navigate('/tradingview')}
               className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
             >
-              Portfolio
+              Trading view
             </button>
             <button
               onClick={handleLogout}

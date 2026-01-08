@@ -57,6 +57,7 @@ export default function Auth({ mode = "signin" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [contactNo, setContactNo] = useState("");
   const [error, setError] = useState("");
 
   // ✅ Submit handler
@@ -65,67 +66,100 @@ export default function Auth({ mode = "signin" }) {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:5000/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      if (isSignIn) {
+        // Sign In logic
+        const res = await fetch("http://localhost:5000/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
 
-      const data = await res.json();
-      console.log("Response:", data);
+        const data = await res.json();
+        console.log("Response:", data);
 
-      if (!res.ok) {
-        setError(data.message || "Login failed");
-        return;
+        if (!res.ok) {
+          setError(data.message || "Login failed");
+          return;
+        }
+
+        console.log("Login success");
+        localStorage.setItem("access_token", data.access_token);
+        localStorage.setItem("username", data.username);
+
+        // Fetch favorite stocks
+        const res1 = await fetch("http://localhost:5000/auth/favorite-stocks", {
+          method: 'GET',
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${data.access_token}`,
+          },
+        });
+
+        const data1 = await res1.json();
+        console.log("Favorite stocks:", data1);
+
+        if (!res1.ok) {
+          setError(data.message || "Failed to fetch favorite stocks");
+          return;
+        }
+
+        // Store favorite stocks in localStorage
+        localStorage.setItem("favorite_stocks", JSON.stringify(data1));
+
+        // Redirect
+        navigate("/dashboard");
+      } else {
+        // Sign Up logic
+        const res = await fetch("http://localhost:5000/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: fullName, email:email, contact_no: contactNo, password:password }),
+        });
+
+        const data = await res.json();
+        console.log("Response:", data);
+
+        if (!res.ok) {
+          setError(data.message || "Registration failed");
+          return;
+        }
+
+        console.log("Registration success");
+        // After registration, redirect to signin or auto-login
+
+       navigate("/signin");
       }
+    } catch (err) {
+      setError();
+    }
+  };
 
-      console.log("Login success");
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("username", data.username);
-
-      const res1= await fetch("http://localhost:5000/auth/favorite-stocks", {
-        method:'GET',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${data.access_token}`,
-          body: JSON.stringify({favorite_stocks: []}),
-        },
-      });
-      
-      const data1 = await res1.json();
-      console.log("Response:", data1);
-
-      if (!res1.ok) {
-        setError(data.message || "failed to fetch favorite stocks");
-        return;
-      }
-
-    // ✅ 2. Redirect
-    navigate("/dashboard");
-  } catch (err) {
-    setError("Server not reachable");
-  }
-     };
+  // Feature cards data
+  const featureCards = [
+    {
+      title: "AI-Powered Insights",
+      description: "Get intelligent stock analysis and predictions using advanced AI models."
+    },
+    {
+      title: "Real-Time Data",
+      description: "Access live market data and charts to make informed investment decisions."
+    },
+    {
+      title: "Personalized Watchlist",
+      description: "Create and manage your custom watchlist of favorite stocks."
+    },
+    {
+      title: "Secure Authentication",
+      description: "Your data is protected with JWT-based secure login and registration."
+    }
+  ];
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-10">
       <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center justify-center gap-8">
-        {/* Left Side - Features */}
-        <section className="hidden lg:flex items-center">
-          <div className="w-[400px] h-[500px] rounded-[1.75rem] border border-slate-800 bg-slate-950/85 p-6 shadow-2xl shadow-black/50 overflow-auto flex flex-col items-center justify-center">
-            <div className="mb-6">
-              <Logo />
-            </div>
-            <div className="space-y-4">
-              {featureCards.map((feature, index) => (
-                <Feature key={index} title={feature.title} description={feature.description} />
-              ))}
-            </div>
-          </div>
-        </section>
-
+       
         {/* Right Side - Auth Form */}
         <section className="flex items-center">
-          <div className="w-full max-w-md lg:w-[400px] h-auto lg:h-[500px] rounded-[1.75rem] border border-slate-800 bg-slate-950/85 p-6 shadow-2xl shadow-black/50 sm:p-8 overflow-auto flex flex-col items-center justify-center">
+          <div className="w-full max-w-md lg: h-auto lg:w-auto rounded-[1.75rem] border border-slate-800 bg-slate-950/85 p-6 shadow-2xl shadow-black/50 sm:p-8 overflow-auto flex flex-col items-center justify-center">
             <div className="mb-8 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-semibold text-slate-50">
@@ -161,43 +195,66 @@ export default function Auth({ mode = "signin" }) {
             <form
               className="space-y-4"
               onSubmit={handleSubmit}
-
-              
             >
+              {error && (
+                <div className="text-red-400 text-sm text-center">
+                  {error}
+                </div>
+              )}
               {!isSignIn && (
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-300" htmlFor="fullName">
-                    Full Name
+                    User name
                   </label>
                   <div className="flex items-center rounded-xl border border-slate-700/80 bg-slate-900/80 px-3">
                     <span className="mr-2 text-slate-500">👤</span>
-                    <input  id="fullName"
-  type="text"
-  placeholder="John Doe"
-  value={fullName}
-  onChange={(e) => setFullName(e.target.value)}
-  className="h-10 w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
-/>
+                    <input  id="username"
+                      type="text"
+                      placeholder="John Doe"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="h-10 w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                    />
                   </div>
                 </div>
               )}
 
+              
+ 
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-300" htmlFor="email">
                   Email Address
                 </label>
                 <div className="flex items-center rounded-xl border border-slate-700/80 bg-slate-900/80 px-3">
                   <span className="mr-2 text-slate-500">📧</span>
-                  <input  id="email"
-  type="email"
-  placeholder="you@example.com"
-  value={email}
-  onChange={(e) => setEmail(e.target.value)}
-  className="h-10 w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
-/>
+                                  <input  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-10 w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                />
                 </div>
               </div>
 
+              {!isSignIn && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-300" htmlFor="ContactNo">
+                    Contact Number
+                  </label>
+                  <div className="flex items-center rounded-xl border border-slate-700/80 bg-slate-900/80 px-3">
+                    <span className="mr-2 text-slate-500">📞</span>
+                    <input  id="contact_no"
+                      type="text"
+                      placeholder="1234567890"
+                      value={contactNo}
+                      onChange={(e) => setContactNo(e.target.value)}
+                      className="h-10 w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+              
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs font-medium text-slate-300">
                   <label htmlFor="password">Password</label>

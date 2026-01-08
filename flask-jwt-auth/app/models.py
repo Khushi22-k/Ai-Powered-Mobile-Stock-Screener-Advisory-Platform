@@ -56,3 +56,33 @@ class Watchlist(db.Model):
     status = db.Column(db.String(10), nullable=False)
     selected_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users_info.id'), nullable=False)
+    type = db.Column(db.String(50), nullable=False)  # 'price_alert', 'ai_signal', 'risk_alert'
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    symbol = db.Column(db.String(30))  # Stock symbol if applicable
+    data = db.Column(db.JSON)  # Additional data like price, confidence, etc.
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('notifications', lazy=True))
+
+class NotificationPreference(db.Model):
+    __tablename__ = 'notification_preferences'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users_info.id'), nullable=False, unique=True)
+    price_alerts_enabled = db.Column(db.Boolean, default=True)
+    ai_signal_alerts_enabled = db.Column(db.Boolean, default=True)
+    risk_alerts_enabled = db.Column(db.Boolean, default=True)
+    price_upper_threshold = db.Column(db.Numeric(6, 2), default=5.0)  # Percentage
+    price_lower_threshold = db.Column(db.Numeric(6, 2), default=-5.0)  # Percentage
+    ai_confidence_threshold = db.Column(db.Numeric(3, 2), default=0.7)  # 0.0 to 1.0
+    cooldown_minutes = db.Column(db.Integer, default=60)  # Minutes between similar notifications
+
+    user = db.relationship('User', backref=db.backref('notification_preferences', lazy=True))
+

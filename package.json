@@ -24,6 +24,8 @@
   },
   "dependencies": {
     "chart.js": "^4.5.1",
+    "chartjs-adapter-date-fns": "^3.0.0",
+    "chartjs-chart-financial": "^0.2.1",
     "lucide-react": "^0.562.0",
     "openai": "^6.15.0",
     "react": "^19.2.1",
