@@ -1,5 +1,6 @@
 from flask import Flask,request,jsonify
 import json
+import random
 from psycopg2 import connect
 import psycopg2
 import os
@@ -9,7 +10,8 @@ from .llm import call_ai_model
 import uuid
 from tqdm import tqdm
 import requests
-from .models import User, ChatRequest, StockData, Watchlist
+from flask_cors import cross_origin
+from .models import User, ChatRequest, StockData, Watchlist, Notification
 from .rag import retrieve_context
 from sqlalchemy import create_engine
 from config import Config
@@ -21,6 +23,7 @@ from werkzeug.security import check_password_hash
 from pgvector.sqlalchemy import Vector
 from pgvector.psycopg2 import register_vector
 from sqlalchemy import Column,Integer
+from .mail import send_confirmation_email
 
 #setting api
 auth_bp = Blueprint("auth", __name__,url_prefix='/auth')
@@ -53,7 +56,11 @@ def register():
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
-    return jsonify({"msg": "User registered successfully"}), 201
+    
+    # Send verification email
+    email_sent = send_confirmation_email(email)
+    
+    return jsonify({"msg": "User registered successfully", "email_sent": email_sent}), 201
 
 
 
@@ -187,7 +194,8 @@ def signin():
         "message": "Login successful",
         "access_token": access_token,
         "refresh_token": refresh_token,
-        "username": user.username
+        "username": user.username,
+        "email":user.email
 
       })
 
@@ -551,6 +559,113 @@ def populate_sample_stocks():
         db.session.add_all(sample_stocks)
         db.session.commit()
         print("Sample stock data populated.")
+
+
+# Notification endpoints
+@auth_bp.route('/api/notifications', methods=['POST','OPTIONS'])
+@jwt_required()
+def get_notifications():
+    if request.method == 'OPTIONS':
+        return '', 200
+    """Fetch notifications for the current user"""
+    try:
+        # ✅ Get email from JWT
+        user_id = get_jwt_identity()
+
+        # ✅ Read query params (not JSON)
+        print(user_id)
+        unread_only = request.args.get('unread_only', 'false').lower() == 'true'
+        limit = request.args.get('limit', 20, type=int)
+
+        query = Notification.query.filter_by(user_id=user_id)
+
+        if unread_only:
+            query = query.filter_by(is_read=False)
+
+        notifications = (
+            query
+            .order_by(Notification.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+
+        notifications_data = [
+            {
+                'user_id': notif.user_id,
+                'type': notif.type,
+                'title': notif.title,
+                'message': notif.message,
+                'symbol': notif.symbol,
+                'data': notif.data,
+                'is_read': notif.is_read,
+                'created_at': notif.created_at.isoformat()
+            }
+            for notif in notifications
+        ]
+        print(notifications_data)
+        return jsonify({
+            'success': True,
+            'notifications': notifications_data,
+            'count': len(notifications_data)
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+        
+@auth_bp.route("/notify/one", methods=["GET"])
+@jwt_required()
+def get_one_notification():
+    user_id = get_jwt_identity()
+
+    notification = (
+        Notification.query.all()
+    )
+    print(notification)
+
+    if not notification:
+        return jsonify({"message": "No notifications"}), 200
+    
+    random_n=random.choice(notification)
+    notification=random_n
+    return jsonify({
+        "id": notification.id,
+        "message": notification.message,
+        "is_read": notification.is_read,
+        "created_at": notification.created_at
+    }), 200
+
+@auth_bp.route('/notify/read/<int:notification_id>/', methods=['POST'])
+@jwt_required()
+def mark_notification_as_read(notification_id):
+    """Mark a notification as read and delete it"""
+    try:
+        user_id = get_jwt_identity()
+        notification = Notification.query.filter_by(id=notification_id, user_id=user_id).first()
+        
+        if not notification:
+            return jsonify({
+                'success': False,
+                'message': 'Notification not found'
+            }), 404
+        
+        # Delete the notification from database
+        db.session.delete(notification)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Notification marked as read and deleted'
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error marking notification as read: {str(e)}'
+        }), 500
 
 if __name__=="__main__":  # Create tables
     populate_sample_stocks()  # Populate sample data

@@ -578,7 +578,7 @@ export default function Watchlist() {
       {/* Stock Slider */}
       <div className={`transition-all duration-300 ${isStockSliderOpen ? 'w-64' : 'w-0'} bg-slate-800/50 border-l border-slate-700/50 overflow-hidden`}>
         <div className="p-6">
-          <h2 className="text-xl font-semibold text-slate-50 mb-4">Stock Symbols</h2>
+          <h2 className="text-xl font-semibold text-slate-50 mb-4">Portfolio Stock Symbols</h2>
           <div className="flex flex-col gap-2">
             {stocks.map((stock) => (
               <button

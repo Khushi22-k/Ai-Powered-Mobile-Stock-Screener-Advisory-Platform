@@ -5,7 +5,9 @@ from .models import NotificationPreference, Notification, User
 
 notifications_bp = Blueprint('notifications', __name__)
 
-@notifications_bp.route('/preferences', methods=['GET'])
+
+
+@notifications_bp.route('/preferences', methods=['GET', 'OPTIONS'])
 @jwt_required()
 def get_preferences():
     user_id = get_jwt_identity()
@@ -30,7 +32,7 @@ def get_preferences():
         'cooldown_minutes': pref.cooldown_minutes
     })
 
-@notifications_bp.route('/preferences', methods=['PUT'])
+@notifications_bp.route('/preferences', methods=['PUT', 'OPTIONS'])
 @jwt_required()
 def update_preferences():
     user_id = get_jwt_identity()
@@ -55,7 +57,7 @@ def update_preferences():
     db.session.commit()
     return jsonify({"message": "Preferences updated successfully"})
 
-@notifications_bp.route('/', methods=['GET'])
+@notifications_bp.route('/', methods=['GET', 'OPTIONS'])
 @jwt_required()
 def get_notifications():
     user_id = get_jwt_identity()
@@ -84,7 +86,7 @@ def get_notifications():
         'unread_count': unread_count
     })
 
-@notifications_bp.route('/read/<int:notification_id>', methods=['POST'])
+@notifications_bp.route('/read/<int:notification_id>', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def mark_as_read(notification_id):
     user_id = get_jwt_identity()

@@ -30,3 +30,15 @@ localStorage.setItem('refresh_token', refresh_token)
 export function getAccessToken(){
 return localStorage.getItem('access_token')
 }
+
+export function getUserEmail(){
+const token = getAccessToken()
+if (!token) return null
+try {
+  const payload = JSON.parse(atob(token.split('.')[1]))
+  return payload.email || null
+} catch (error) {
+  console.error('Error decoding token:', error)
+  return null
+}
+}

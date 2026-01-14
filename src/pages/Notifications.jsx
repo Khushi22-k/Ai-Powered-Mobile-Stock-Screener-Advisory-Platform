@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getUserEmail } from '../utils/auth';
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState([]);
@@ -7,13 +8,15 @@ export default function Notifications() {
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch('http://localhost:5000/api/notifications?limit=50&unread_only=false', {
+      const res = await fetch('http://localhost:5000/auth/api/notifications', {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
-        }
+        },body: JSON.stringify({ email:'radha_1@gmail.com' })
       });
       if (res.ok) {
         const data = await res.json();
+        console.log('Fetched notifications:', data.notifications);
         setNotifications(data.notifications);
       }
     } catch (error) {
@@ -22,24 +25,40 @@ export default function Notifications() {
       setLoading(false);
     }
   };
+const markAsRead = async (notificationId) => {
+  if (!notificationId) return; // safety check
 
-  const markAsRead = async (notificationId) => {
-    try {
-      const token = localStorage.getItem('access_token');
-      await fetch(`http://localhost:5000/api/notifications/read/${notificationId}/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      // Update local state
-      setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? {...n, is_read: true} : n)
-      );
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
+  try {
+    const token = localStorage.getItem('access_token');
+
+    const res = await fetch(`http://localhost:5000/api/notifications/read/${notificationId}/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Failed to mark as read");
     }
-  };
+
+    // Update local state
+    setNotifications(prev =>
+      prev.map(n => n.id === notificationId ? {...n, is_read: true} : n)
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+
+    alert("Notification marked as read!"); // pop-up
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+  }
+};
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
@@ -55,9 +74,6 @@ export default function Notifications() {
     return `${days}d ago`;
   };
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
 
   if (loading) {
     return (

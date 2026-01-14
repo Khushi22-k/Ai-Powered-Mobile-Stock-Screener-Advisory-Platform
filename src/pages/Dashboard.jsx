@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
-import { TrendingUp, TrendingDown, DollarSign, Activity, Menu, X, LogOut } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, Menu, X, LogOut, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {Star} from 'lucide-react';
+import {toast} from "react-toastify";
+import apii from '../utils/axiosInstance';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -11,6 +13,7 @@ export default function Dashboard() {
 
 useEffect(() => {
   if (!token) {
+    toast.success("successfully login")
     navigate("/login");
   }
 }, [token,navigate]);
@@ -27,6 +30,8 @@ useEffect(() => {
   const [favoriteStocks, setFavoriteStocks] = useState([]);
   const [favoriteSymbols, setFavoriteSymbols] = useState([]);
   const [lastClickTime, setLastClickTime] = useState({});
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const API_BASE = 'http://127.0.0.1:5000';
 
@@ -48,6 +53,8 @@ useEffect(() => {
       }, 300);
     }
   };
+
+    
 
    const addFavorite = async (symbol) => {
     const isCurrentlyFavorite = favoriteSymbols.includes(symbol.toUpperCase());
@@ -97,6 +104,37 @@ useEffect(() => {
     localStorage.removeItem("username");
     navigate("/signin");
   };
+
+ 
+useEffect(() => {
+  const fetchNotifications = async () => {
+    try {
+      const res = await apii.get("/auth/notify/one",{
+         headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const n= res.data
+      console.log(res.data)
+      if(!n || !n.message){
+        console.log("no new notifications");
+        return;
+
+      }
+
+      toast.success(n.message);
+
+        // mark as read
+        apii.post(`/notify/read/${n.id}`);
+      ;
+    } catch (err) {
+      console.log("No new notifications");
+    }
+  };
+
+  fetchNotifications();
+}, []);
+
 
 
   useEffect(() => {
@@ -185,6 +223,20 @@ useEffect(() => {
     setStockHistory([]);
   }
 };
+
+  const fetchNotifications = async () => {
+    if (!authHeaders) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/notifications`, { headers: authHeaders });
+      if (!res.ok) throw new Error("Notifications fetch failed");
+      const data = await res.json();
+      setNotifications(data.notifications);
+      setShowNotifications(true);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  };
 
 
 
@@ -311,6 +363,13 @@ useEffect(() => {
               Trading view
             </button>
             <button
+              onClick={() => navigate('/notifications')}
+              className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition flex items-center gap-2"
+            >
+              <Bell size={16}  onClick={() => fetchNotifications()}/>
+              Notifications
+            </button>
+            <button
               onClick={handleLogout}
               className="bg-red-600 hover:bg-red-700 text-slate-50 px-4 py-2 rounded-xl border border-red-500 transition flex items-center gap-2"
             >
@@ -325,15 +384,53 @@ useEffect(() => {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-3xl font-bold text-slate-50">Stock Market Dashboard</h1>
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 rounded-xl border border-slate-700/50 transition"
-              >
-                {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => navigate('/notifications')}
+                  className="p-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 rounded-xl border border-cyan-500/30 transition flex items-center gap-2"
+                  title="View Notifications"
+                >
+                  <Bell size={20} />
+                </button>
+                <button
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="p-2 bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 rounded-xl border border-slate-700/50 transition"
+                >
+                  {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                </button>
+              </div>
             </div>
             <p className="text-slate-400">Real-time stock prices and market data</p>
           </div>
+
+          {/* Notifications Modal */}
+          {showNotifications && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 max-w-md w-full mx-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-50">Notifications</h3>
+                  <button
+                    onClick={() => setShowNotifications(false)}
+                    className="text-slate-400 hover:text-slate-50"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {notifications.length > 0 ? (
+                    notifications.map((notification, index) => (
+                      <div key={index} className="bg-slate-700/50 rounded-lg p-3 border border-slate-600">
+                        <p className="text-slate-50 text-sm">{notification.message}</p>
+                        <p className="text-slate-400 text-xs mt-1">{new Date(notification.timestamp).toLocaleString()}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-slate-400 text-sm">No notifications available.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
         {/* Market Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

@@ -12,7 +12,9 @@ export default function NotificationBell() {
     try {
       const token = localStorage.getItem('access_token');
       const res = await fetch('http://localhost:5000/api/notifications?limit=10&unread_only=false', {
+        method: 'GET',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         }
       });
@@ -32,6 +34,7 @@ export default function NotificationBell() {
       await fetch(`http://localhost:5000/api/notifications/read/${notificationId}/`, {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         }
       });
@@ -112,15 +115,14 @@ export default function NotificationBell() {
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="text-sm font-medium text-slate-100">
                       {notification.title}
-                    </h4>
-                    {!notification.is_read && (
-                      <button
-                        onClick={() => markAsRead(notification.id)}
-                        className="text-cyan-400 hover:text-cyan-300 text-sm"
-                      >
-                        Mark read
-                      </button>
-                    )}
+                    </h4>{
+                   notifications.map(n => (
+  <div key={n.id}>
+    <span>{n.message}</span>
+    <button onClick={() => markAsRead(n.id)}>Mark as read</button>
+  </div>
+))
+})
                   </div>
                   <p className="text-sm text-slate-300 mb-2">
                     {notification.message}

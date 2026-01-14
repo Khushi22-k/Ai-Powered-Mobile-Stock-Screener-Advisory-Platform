@@ -74,8 +74,7 @@ class Notification(db.Model):
 class NotificationPreference(db.Model):
     __tablename__ = 'notification_preferences'
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users_info.id'), nullable=False, unique=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users_info.id'), primary_key=True, nullable=False)
     price_alerts_enabled = db.Column(db.Boolean, default=True)
     ai_signal_alerts_enabled = db.Column(db.Boolean, default=True)
     risk_alerts_enabled = db.Column(db.Boolean, default=True)

@@ -59,11 +59,13 @@ export default function Auth({ mode = "signin" }) {
   const [fullName, setFullName] = useState("");
   const [contactNo, setContactNo] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   // ✅ Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
     try {
       if (isSignIn) {
@@ -119,18 +121,24 @@ export default function Auth({ mode = "signin" }) {
         const data = await res.json();
         console.log("Response:", data);
 
-        if (!res.ok) {
-          setError(data.message || "Registration failed");
-          return;
-        }
-
         console.log("Registration success");
-        // After registration, redirect to signin or auto-login
+        // Show success message and redirect
+        setSuccess(`Account created successfully! Verification email sent to ${email}. Redirecting to login...`);
+        
+        // Clear form
+        setFullName("");
+        setEmail("");
+        setContactNo("");
+        setPassword("");
 
-       navigate("/signin");
+        // Redirect to signin after 3 seconds
+        setTimeout(() => {
+          navigate("/signin");
+        }, 3000);
       }
     } catch (err) {
-      setError();
+      setError("An error occurred. Please try again.");
+      console.error(err);
     }
   };
 
@@ -197,8 +205,13 @@ export default function Auth({ mode = "signin" }) {
               onSubmit={handleSubmit}
             >
               {error && (
-                <div className="text-red-400 text-sm text-center">
+                <div className="text-red-400 text-sm text-center bg-red-400/10 border border-red-400/30 rounded-lg p-3">
                   {error}
+                </div>
+              )}
+              {success && (
+                <div className="text-green-400 text-sm text-center bg-green-400/10 border border-green-400/30 rounded-lg p-3">
+                  {success}
                 </div>
               )}
               {!isSignIn && (
