@@ -27,6 +27,8 @@ const ChatGPTClone = () => {
   const [username, setUsername] = useState(localStorage.getItem('username'));
   const messagesEndRef = useRef(null);
 
+  const API_BASE = 'http://127.0.0.1:5000';
+
   const createNewSession = () => {
     const newSession = {
       id: uuidv4(),
@@ -67,6 +69,25 @@ const ChatGPTClone = () => {
   useEffect(() => {
     saveSessions(sessions);
   }, [sessions]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) return;
+      try {
+        const res = await fetch(`${API_BASE}/auth/fetch_user`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        console.log(data.username);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    fetchUser();
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");

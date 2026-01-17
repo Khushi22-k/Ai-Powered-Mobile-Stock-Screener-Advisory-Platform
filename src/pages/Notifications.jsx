@@ -12,7 +12,7 @@ export default function Notifications() {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
-        },body: JSON.stringify({ email:'radha_1@gmail.com' })
+        },body: JSON.stringify({})
       });
       if (res.ok) {
         const data = await res.json();
@@ -25,36 +25,7 @@ export default function Notifications() {
       setLoading(false);
     }
   };
-const markAsRead = async (notificationId) => {
-  if (!notificationId) return; // safety check
 
-  try {
-    const token = localStorage.getItem('access_token');
-
-    const res = await fetch(`http://localhost:5000/api/notifications/read/${notificationId}/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.message || "Failed to mark as read");
-    }
-
-    // Update local state
-    setNotifications(prev =>
-      prev.map(n => n.id === notificationId ? {...n, is_read: true} : n)
-    );
-    setUnreadCount(prev => Math.max(0, prev - 1));
-
-    alert("Notification marked as read!"); // pop-up
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-  }
-};
 
   useEffect(() => {
     fetchNotifications();
@@ -108,14 +79,6 @@ const markAsRead = async (notificationId) => {
                   <h3 className="text-lg font-semibold text-slate-100">
                     {notification.title}
                   </h3>
-                  {!notification.is_read && (
-                    <button
-                      onClick={() => markAsRead(notification.id)}
-                      className="px-3 py-1 bg-cyan-500 text-slate-950 text-sm font-medium rounded-lg hover:bg-cyan-400 transition-colors"
-                    >
-                      Mark as Read
-                    </button>
-                  )}
                 </div>
                 <p className="text-slate-300 mb-4">
                   {notification.message}

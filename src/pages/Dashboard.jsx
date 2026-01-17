@@ -54,7 +54,39 @@ useEffect(() => {
     }
   };
 
-    
+   const fetch_username = async ()=>{
+    try{
+      const res= await fetch(`${API_BASE}/auth/fetch_user`,{
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });console.log("fetching username")
+      const data= await res.json();
+      console.log(data.username)  
+    }catch(err){
+      console.log(err)
+    }
+   }
+
+   const deletenotification=async() =>{
+    try{
+      const res=await fetch(`${API_BASE}/auth/api/notifications/delete`,{
+        method:'POST',
+        headers:{
+          "Content-Type":"application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        
+        }
+      );
+      if (!res.ok){
+        throw new Error("Failed to delete notifications");
+      }
+      return await res.json();
+    }catch(err){
+      console.log(err)
+    }
+   };
 
    const addFavorite = async (symbol) => {
     const isCurrentlyFavorite = favoriteSymbols.includes(symbol.toUpperCase());
@@ -124,9 +156,7 @@ useEffect(() => {
 
       toast.success(n.message);
 
-        // mark as read
-        apii.post(`/notify/read/${n.id}`);
-      ;
+       
     } catch (err) {
       console.log("No new notifications");
     }
@@ -138,6 +168,7 @@ useEffect(() => {
 
 
   useEffect(() => {
+    deletenotification();
     fetchData();
     fetchFavoriteStocks();
     const interval = setInterval(fetchData, 30000); // Update every 30 seconds
@@ -345,7 +376,7 @@ useEffect(() => {
               Dashboard
             </button>
             <button
-              onClick={() => navigate('/chatgpt')}
+              onClick={() => navigate('/chatgpt')} 
               className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
             >
               Advisory Platform

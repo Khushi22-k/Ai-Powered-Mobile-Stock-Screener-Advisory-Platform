@@ -25,13 +25,12 @@ ChartJS.register(
   Filler
 );
 
+// ✅ Only selected ranges
 const TIME_RANGES = [
-  { label: "1 Minute", value: "1m", limit: 60, interval: "1minute" },
   { label: "1 Week", value: "1w", limit: 7, interval: "hourly" },
   { label: "3 Weeks", value: "3w", limit: 21, interval: "hourly" },
   { label: "1 Month", value: "1M", limit: 30, interval: "daily" },
   { label: "3 Months", value: "3M", limit: 90, interval: "daily" },
-  { label: "6 Months", value: "6M", limit: 180, interval: "daily" },
   { label: "1 Year", value: "1Y", limit: 365, interval: "weekly" },
   { label: "3 Years", value: "3Y", limit: 1095, interval: "monthly" },
   { label: "5 Years", value: "5Y", limit: 1825, interval: "monthly" },
@@ -44,16 +43,14 @@ const popularStocks = [
 function StockChart() {
   const { symbol: urlSymbol } = useParams();
   const [symbol, setSymbol] = useState(urlSymbol || "AAPL");
-  const [range, setRange] = useState(TIME_RANGES[6]); // Default 1Y
+  const [range, setRange] = useState(TIME_RANGES[4]); // Default 1Y
   const [chartType, setChartType] = useState("line");
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (urlSymbol) {
-      setSymbol(urlSymbol);
-    }
+    if (urlSymbol) setSymbol(urlSymbol);
   }, [urlSymbol]);
 
   useEffect(() => {
@@ -79,14 +76,27 @@ function StockChart() {
         });
 
         const json = await res.json();
-        const eod = json?.data?.eod;
-        
-        if (!eod || !eod.length) {
-          throw new Error("No data found");
+        console.log("json",json);
+                
+        let eod = [];
+
+        // Case 1: data is array
+        if (Array.isArray(json?.raw_response?.data.eod)) {
+          eod = json.raw_response.data.eod;
+        }else if (Array.isArray(json?.data)){
+          eod=json.data;
+        }
+        // Case 2: data is dict with nested lists
+        else if (typeof json?.data === "object") {
+          // flatten all arrays inside data
+          eod = Object.values(json.data).flat();
         }
 
-        const closePrices = eod
-          .reverse()
+        if (!eod.length) {
+          throw new Error("No data found for this range");
+        }
+        const chartPoints = eod
+          .slice(-range.limit)
           .map((d) => ({
             x: new Date(d.date),
             y: Number(d.close),
@@ -96,11 +106,9 @@ function StockChart() {
           datasets: [
             {
               label: `${symbol} Close Price`,
-              data: closePrices,
+              data: chartPoints,
               borderColor: "#00d4aa",
-              backgroundColor: chartType === "area" 
-                ? "rgba(0, 212, 170, 0.2)" 
-                : "transparent",
+              backgroundColor: chartType === "area" ? "rgba(0, 212, 170, 0.2)" : "transparent",
               fill: chartType === "area",
               tension: 0.3,
               pointRadius: 0,
@@ -118,15 +126,13 @@ function StockChart() {
     };
 
     fetchData();
-  }, [symbol, range]);
+  }, [symbol, range, chartType]);
 
   const options = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: false,
-      },
+      legend: { display: false },
       tooltip: {
         mode: "index",
         intersect: false,
@@ -144,93 +150,49 @@ function StockChart() {
       x: {
         type: "time",
         time: {
-          unit: range.value === "1m" ? "minute" :
-                range.value === "1w" || range.value === "3w" ? "hour" :
-                range.value === "1M" || range.value === "3M" || range.value === "6M" ? "day" :
+          unit: range.value === "1w" || range.value === "3w" ? "hour" :
+                range.value === "1M" || range.value === "3M" ? "day" :
                 range.value === "1Y" ? "week" : "month",
-          displayFormats: {
-            minute: "HH:mm",
-            hour: "MMM dd HH:mm",
-            day: "MMM dd",
-            week: "MMM dd",
-            month: "MMM 'YY",
-          },
+          displayFormats: { hour: "MMM dd HH:mm", day: "MMM dd", week: "MMM dd", month: "MMM 'YY" },
         },
-        grid: { 
-          color: "rgba(51,65,88,0.3)",
-          drawBorder: false,
-        },
-        ticks: { 
-          color: "#9CA3AF",
-          maxRotation: 45,
-        },
+        grid: { color: "rgba(51,65,88,0.3)", drawBorder: false },
+        ticks: { color: "#9CA3AF", maxRotation: 45 },
         border: { color: "transparent" },
       },
       y: {
         position: "right",
-        grid: { 
-          color: "rgba(51,65,88,0.3)",
-          drawBorder: false,
-        },
-        ticks: {
-          color: "#9CA3AF",
-          callback: (value) => `$${value.toFixed(2)}`,
-        },
+        grid: { color: "rgba(51,65,88,0.3)", drawBorder: false },
+        ticks: { color: "#9CA3AF", callback: (value) => `$${value.toFixed(2)}` },
         border: { color: "transparent" },
       },
     },
-    elements: {
-      line: {
-        borderWidth: 2,
-        tension: 0.3,
-      },
-      point: {
-        radius: 0,
-        hoverRadius: 4,
-      },
-    },
-    layout: {
-      backgroundColor: "#0a0e17",
-      padding: {
-        left: 10,
-        right: 10,
-        top: 10,
-        bottom: 10,
-      },
-    },
+    elements: { line: { borderWidth: 2, tension: 0.3 }, point: { radius: 0, hoverRadius: 4 } },
+    layout: { backgroundColor: "#0a0e17", padding: { left: 10, right: 10, top: 10, bottom: 10 } },
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
       <div className="max-w-6xl mx-auto">
-        {/* 🔥 HEADER */}
+        {/* HEADER */}
         <div className="flex flex-col lg:flex-row gap-6 mb-8 justify-between items-start lg:items-center">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
             Stock Price Charts
           </h1>
           
-          {/* 🔥 STOCK SELECTOR */}
+          {/* STOCK SELECTOR */}
           <div className="flex gap-4 items-center">
             <select
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
               className="bg-slate-700/50 text-white px-4 py-3 rounded-xl border border-slate-600 focus:border-cyan-500 focus:outline-none text-lg font-medium"
             >
-              {urlSymbol && !popularStocks.includes(urlSymbol) && (
-                <option key={urlSymbol} value={urlSymbol}>
-                  {urlSymbol}
-                </option>
-              )}
-              {popularStocks.map((stock) => (
-                <option key={stock} value={stock}>
-                  {stock}
-                </option>
-              ))}
+              {urlSymbol && !popularStocks.includes(urlSymbol) && <option value={urlSymbol}>{urlSymbol}</option>}
+              {popularStocks.map((stock) => <option key={stock} value={stock}>{stock}</option>)}
             </select>
           </div>
         </div>
 
-        {/* 🔥 CONTROLS */}
+        {/* CONTROLS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 p-6 bg-slate-800/50 rounded-2xl border border-slate-700">
           <div>
             <label className="block text-slate-300 mb-2 font-medium">Chart Type</label>
@@ -264,37 +226,19 @@ function StockChart() {
           </div>
         </div>
 
-        {/* 🔥 CHART */}
+        {/* CHART */}
         <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-8 shadow-2xl">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
               {symbol} - {range.label}
             </h2>
-            <div className="text-slate-400 text-sm">
-              {chartType === "line" ? "Line Chart" : "Area Chart"}
-            </div>
+            <div className="text-slate-400 text-sm">{chartType === "line" ? "Line Chart" : "Area Chart"}</div>
           </div>
 
           <div className="relative h-[600px] w-full">
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-xl">
-                <div className="text-white text-xl font-medium">
-                  Loading {range.label} data for {symbol}...
-                </div>
-              </div>
-            )}
-            {error && (
-              <div className="absolute inset-0 flex items-center justify-center bg-red-900/80 rounded-xl">
-                <div className="text-red-300 text-lg">Error: {error}</div>
-              </div>
-            )}
-            {!loading && !error && chartData && (
-              <Chart 
-                type="line" 
-                data={chartData} 
-                options={options} 
-              />
-            )}
+            {loading && <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-xl text-white text-xl font-medium">Loading {range.label} data for {symbol}...</div>}
+            {error && <div className="absolute inset-0 flex items-center justify-center bg-red-900/80 rounded-xl text-red-300 text-lg">Error: {error}</div>}
+            {!loading && !error && chartData && <Chart type="line" data={chartData} options={options} />}
           </div>
         </div>
       </div>

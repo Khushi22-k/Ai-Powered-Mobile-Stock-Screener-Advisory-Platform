@@ -76,7 +76,6 @@ function TradingViewWidget() {
       if (existingScript) {
         existingScript.remove();
       }
-
       const script = document.createElement("script");
       script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
       script.type = "text/javascript";
@@ -95,48 +94,38 @@ function TradingViewWidget() {
           "locale": "en",
           "save_image": true,
           "style": "1",
-          "symbol": "NSE:${symbol || 'AAPL'}",
+          "symbol": "NASDAQ:AAPL",
           "theme": "dark",
           "timezone": "Etc/UTC",
-          "backgroundColor": "#ffffff",
-          "gridColor": "rgba(46, 46, 46, 0.06)",
+          "backgroundColor": "#0F0F0F",
+          "gridColor": "rgba(242, 242, 242, 0.06)",
           "watchlist": [
-            "NASDAQ:TSLA",
             "NASDAQ:NVDA",
+            "NASDAQ:TSLA",
             "NASDAQ:AAPL",
-            "NASDAQ:AMZN",
             "NASDAQ:META",
             "NASDAQ:MSFT",
-            "NASDAQ:NFLX",
-            "NSE:RELIANCE",
+            "NASDAQ:AMZN",
+            "NASDAQ:GOOG",
             "NASDAQ:INTC",
+            "NSE:SBIN",
             "NSE:ICICIBANK",
-            "NSE:INFY",
-            "NSE:BHARTIARTL",
-            "NSE:TCS",
-            "NSE:BAJFINANCE",
-            "NSE:TATASTEEL",
-            "NSE:HCLTECH",
-            "NSE:AXISBANK",
-            "NSE:WIPRO",
-            "NSE:ASIANPAINT",
-            "NSE:MARUTI",
-            "NSE:HINDUNILVR",
-            "NSE:UNIONBANK"
+            "NSE:HDFCBANK",
+            "NYSE:BABA",
+            "NASDAQ:ADBE"
           ],
           "withdateranges": false,
           "compareSymbols": [],
           "studies": [],
           "width": 1200,
-          "height": 600
+          "height": 650
         }`;
       container.current.appendChild(script);
     },
-    [symbol]
+    []
   );
+
  
-
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex">
       <div className={`transition-all duration-300 ${isMenuOpen ? 'w-1/3' : 'w-0'} bg-slate-800/50 border-r border-slate-700/50 overflow-hidden`}>

@@ -85,3 +85,32 @@ class NotificationPreference(db.Model):
 
     user = db.relationship('User', backref=db.backref('notification_preferences', lazy=True))
 
+class StockHistorical(db.Model):
+    __tablename__ = 'stock_historical'
+
+    id = db.Column(db.Integer, primary_key=True)
+    symbol = db.Column(db.String(30), nullable=False, index=True)
+    date = db.Column(db.Date, nullable=False)
+    close_price = db.Column(db.Numeric(10, 2), nullable=False)
+    volume = db.Column(db.BigInteger, nullable=False)
+
+class StockLatestSnapshot(db.Model):
+    __tablename__ = 'stock_latest_snapshot'
+
+    symbol = db.Column(db.String(30), primary_key=True)
+    last_price = db.Column(db.Numeric(10, 2))
+    last_signal = db.Column(db.String(20))
+    last_checked = db.Column(db.DateTime, default=datetime.utcnow)
+
+class AlertRules(db.Model):
+    __tablename__ = 'alert_rules'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users_info.id'), nullable=False)
+    symbol = db.Column(db.String(30), nullable=False)
+    alert_type = db.Column(db.String(50), nullable=False)
+    triggered = db.Column(db.Boolean, default=False)
+    last_triggered = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('alert_rules', lazy=True))
+

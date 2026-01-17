@@ -1,101 +1,126 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from . import db
-from .models import NotificationPreference, Notification, User
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import json
+from datetime import datetime
 
-notifications_bp = Blueprint('notifications', __name__)
+DB_CONFIG = {
+    "dbname": "postgres",
+    "user": "postgres",
+    "password": 1234,
+    "host": "localhost",
+    "port": 5432
+}
+
+def calculate_change(new_price, old_price):
+    if not old_price:
+        return 0, 0
+    change = new_price - old_price
+    percent = (change / old_price) * 100
+    return round(change, 2), round(percent, 2)
 
 
+def update_stock_and_notify(symbol, user_id, latest):
+    """
+    latest = {
+        "open": float,
+        "high": float,
+        "low": float,
+        "close": float
+    }
+    """
 
-@notifications_bp.route('/preferences', methods=['GET', 'OPTIONS'])
-@jwt_required()
-def get_preferences():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"error": "User not found"}), 404
+    conn = None
+    cur = None
 
-    pref = NotificationPreference.query.filter_by(user_id=user_id).first()
-    if not pref:
-        # Create default preferences if not exist
-        pref = NotificationPreference(user_id=user_id)
-        db.session.add(pref)
-        db.session.commit()
+    try:
+        # ✅ Validate numeric OHLC
+        for key in ("open", "high", "low", "close"):
+            if latest.get(key) is None:
+                print(f"Invalid OHLC data for {symbol}: {latest}")
+                return
 
-    return jsonify({
-        'price_alerts_enabled': pref.price_alerts_enabled,
-        'ai_signal_alerts_enabled': pref.ai_signal_alerts_enabled,
-        'risk_alerts_enabled': pref.risk_alerts_enabled,
-        'price_upper_threshold': float(pref.price_upper_threshold) if pref.price_upper_threshold else '',
-        'price_lower_threshold': float(pref.price_lower_threshold) if pref.price_lower_threshold else '',
-        'ai_confidence_threshold': float(pref.ai_confidence_threshold),
-        'cooldown_minutes': pref.cooldown_minutes
-    })
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
 
-@notifications_bp.route('/preferences', methods=['PUT', 'OPTIONS'])
-@jwt_required()
-def update_preferences():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"error": "User not found"}), 404
+        # 🔹 Fetch previous price
+        cur.execute("""
+            SELECT last_traded_price
+            FROM stock_data
+            WHERE symbol = %s
+        """, (symbol,))
+        row = cur.fetchone()
 
-    data = request.get_json()
-    pref = NotificationPreference.query.filter_by(user_id=user_id).first()
-    if not pref:
-        pref = NotificationPreference(user_id=user_id)
-        db.session.add(pref)
+        if not row:
+            print(f"Stock {symbol} not found in DB")
+            return
 
-    pref.price_alerts_enabled = data.get('price_alerts_enabled', pref.price_alerts_enabled)
-    pref.ai_signal_alerts_enabled = data.get('ai_signal_alerts_enabled', pref.ai_signal_alerts_enabled)
-    pref.risk_alerts_enabled = data.get('risk_alerts_enabled', pref.risk_alerts_enabled)
-    pref.price_upper_threshold = data.get('price_upper_threshold', pref.price_upper_threshold)
-    pref.price_lower_threshold = data.get('price_lower_threshold', pref.price_lower_threshold)
-    pref.ai_confidence_threshold = data.get('ai_confidence_threshold', pref.ai_confidence_threshold)
-    pref.cooldown_minutes = data.get('cooldown_minutes', pref.cooldown_minutes)
+        old_price = float(row["last_traded_price"] or 0)
+        new_price = float(latest["close"])
 
-    db.session.commit()
-    return jsonify({"message": "Preferences updated successfully"})
+        # 🔹 Calculate change
+        price_change, percent_change = calculate_change(new_price, old_price)
 
-@notifications_bp.route('/', methods=['GET', 'OPTIONS'])
-@jwt_required()
-def get_notifications():
-    user_id = get_jwt_identity()
-    limit = request.args.get('limit', 10, type=int)
-    unread_only = request.args.get('unread_only', 'false').lower() == 'true'
+        # 🔔 Insert notification ONLY if price changed
+        if price_change != 0:
+            direction = "UP" if price_change > 0 else "DOWN"
 
-    query = Notification.query.filter_by(user_id=user_id)
-    if unread_only:
-        query = query.filter_by(is_read=False)
+            notification_payload = {
+                "previous_price": old_price,
+                "current_price": new_price,
+                "change": price_change,
+                "change_percent": percent_change,
+                "direction": direction
+            }
 
-    notifications = query.order_by(Notification.created_at.desc()).limit(limit).all()
+            cur.execute("""
+                INSERT INTO notifications
+                    (user_id, type, title, message, symbol, data, is_read, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                user_id,
+                "STOCK_ALERT",
+                "Stock Price Update",
+                f"{symbol} {direction} by {price_change} ({percent_change}%)",
+                symbol,
+                json.dumps(notification_payload),
+                False,
+                datetime.utcnow()
+            ))
 
-    unread_count = Notification.query.filter_by(user_id=user_id, is_read=False).count()
+        # 🔹 Update stock_data
+        cur.execute("""
+            UPDATE stock_data SET
+                open_price = %s,
+                high_price = %s,
+                low_price = %s,
+                previous_close = %s,
+                last_traded_price = %s,
+                price_change = %s,
+                percentage_change = %s,
+                daypercentagechange = %s
+            WHERE symbol = %s
+        """, (
+            latest["open"],
+            latest["high"],
+            latest["low"],
+            latest["open"],  # previous_close (correct)
+            new_price,
+            price_change,
+            percent_change,
+            percent_change,
+            symbol
+        ))
 
-    return jsonify({
-        'notifications': [{
-            'id': n.id,
-            'type': n.type,
-            'title': n.title,
-            'message': n.message,
-            'symbol': n.symbol,
-            'data': n.data,
-            'is_read': n.is_read,
-            'created_at': n.created_at.isoformat()
-        } for n in notifications],
-        'unread_count': unread_count
-    })
+        conn.commit()
+        print(f"Stock {symbol} updated & notification inserted for user {user_id} ✅")
 
-@notifications_bp.route('/read/<int:notification_id>', methods=['POST', 'OPTIONS'])
-@jwt_required()
-def mark_as_read(notification_id):
-    user_id = get_jwt_identity()
-    notification = Notification.query.filter_by(id=notification_id, user_id=user_id).first()
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"Notification error for {symbol}: {e}")
 
-    if not notification:
-        return jsonify({"error": "Notification not found"}), 404
-
-    notification.is_read = True
-    db.session.commit()
-
-    return jsonify({"message": "Notification marked as read"})
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()

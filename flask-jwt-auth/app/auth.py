@@ -24,6 +24,7 @@ from pgvector.sqlalchemy import Vector
 from pgvector.psycopg2 import register_vector
 from sqlalchemy import Column,Integer
 from .mail import send_confirmation_email
+from .notifications import update_stock_and_notify
 
 #setting api
 auth_bp = Blueprint("auth", __name__,url_prefix='/auth')
@@ -235,6 +236,10 @@ def get_stocks():
                 'industry': stock.industry or 'Unknown'
             })
     return jsonify(stock_data)
+def calculate_change(old, new):
+    if old == 0 or old is None:
+        return 0
+    return round(((new - old) / old) * 100, 2)
 
 
 @auth_bp.route('/favorite-stock', methods=['POST', 'OPTIONS'])
@@ -246,6 +251,7 @@ def set_favorite_stock():
     data = request.get_json()
     symbol = data.get("symbol")
     status = data.get("status")
+    data_type=data.get("type",'eod')
     print("Received data:", data)  # Debugging line
 
     if not symbol:
@@ -298,20 +304,18 @@ def set_favorite_stock():
         conn_local.close()
 
     return jsonify({"message": "Favorite stock updated successfully"}), 200
-
-
-
 @auth_bp.route("/api/chart", methods=["POST"])
+@jwt_required()
 def chart():
     body = request.json
     symbol = body["symbol"]
-    limit = body["limit"]
-    data_type = body["type"]
+    limit = body.get("limit", 1)
+    data_type = body.get("type", "eod")
 
-    # Check if API key is available - if not, use mock data for testing
+    user_id = get_jwt_identity()
+
     if not MARKET_API_KEY or MARKET_API_KEY == "your_api_key_here":
-        print("Using mock data for testing - API key not configured")
-        return get_mock_chart_data(symbol, limit, data_type)
+        return jsonify({"error": "Market API key not configured"}), 500
 
     if data_type == "intraday":
         url = f"https://api.marketstack.com/v2/tickers/{symbol}/intraday"
@@ -321,40 +325,71 @@ def chart():
     params = {
         "access_key": MARKET_API_KEY,
         "limit": limit,
+        
         "sort": "DESC"
     }
 
     try:
         res = requests.get(url, params=params, timeout=10)
+        print(f"Marketstack API status: {res.status_code}")
 
         if res.status_code != 200:
-            return jsonify({
-                "error": f"MarketStack API error: {res.status_code}",
-                "message": res.text
-            }), res.status_code
+            print(f"Marketstack API error response: {res.text}")
+            return jsonify({"error": "Marketstack API failed"}), res.status_code
 
         data = res.json()
-        print(f"API Response for {symbol}: {data}")
+        print("Marketstack API keys:", data.keys())
 
-        # Check if we have valid data
-        if "data" not in data or not data["data"]:
-            return jsonify({
-                "error": "No data available",
-                "message": f"No chart data found for symbol {symbol}"
-            }), 404
+        latest = None
 
-        return jsonify(data)
+        # ✅ Marketstack format handling
+        market_data = data.get("data")
+
+                # Case 1: data is dict { "TSLA": [ ... ] }
+        if isinstance(market_data, dict):
+            for symbol_key, rows in market_data.items():
+                if isinstance(rows, list):
+                    for row in rows:
+                        if isinstance(row.get("open"), (int, float)) and isinstance(row.get("close"), (int, float)):
+                            latest = row
+                            break
+                if latest:
+                    break
+
+        # Case 2: data is list [ ... ]
+        elif isinstance(market_data, list):
+            for row in market_data:
+                if isinstance(row.get("open"), (int, float)) and isinstance(row.get("close"), (int, float)):
+                    latest = row
+                    break
+
+        print("Latest data:", latest)
+
+        if not latest:
+            print(f"No valid numeric OHLC data from API for {symbol}")
+            return jsonify({"error": "No valid price data available"}), 404
+        stock_info = {
+            "open": latest["open"],
+            "high": latest["high"],
+            "low": latest["low"],
+            "close": latest["close"]
+        }
+
+        update_stock_and_notify(symbol, user_id, stock_info)
+        print("sending data from backend")
+
+        return jsonify({
+            'symbol':symbol,
+            'latest':latest,
+            'raw_response':data
+        })
+
 
     except requests.exceptions.RequestException as e:
-        return jsonify({
-            "error": "API request failed",
-            "message": str(e)
-        }), 500
-    except Exception as e:
-        return jsonify({
-            "error": "Unexpected error",
-            "message": str(e)
-        }), 500
+        print(f"exception in chart endpoint,{e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
 
 def get_mock_chart_data(symbol, limit, data_type):
     """Generate mock chart data for testing purposes"""
@@ -615,56 +650,186 @@ def get_notifications():
             'message': str(e)
         }), 500
 
-        
-@auth_bp.route("/notify/one", methods=["GET"])
+
+@auth_bp.route('/fetch_user',methods=['GET','OPTIONS'])
 @jwt_required()
-def get_one_notification():
-    user_id = get_jwt_identity()
-
-    notification = (
-        Notification.query.all()
-    )
-    print(notification)
-
-    if not notification:
-        return jsonify({"message": "No notifications"}), 200
-    
-    random_n=random.choice(notification)
-    notification=random_n
-    return jsonify({
-        "id": notification.id,
-        "message": notification.message,
-        "is_read": notification.is_read,
-        "created_at": notification.created_at
-    }), 200
-
-@auth_bp.route('/notify/read/<int:notification_id>/', methods=['POST'])
-@jwt_required()
-def mark_notification_as_read(notification_id):
-    """Mark a notification as read and delete it"""
+def fetch_username():
+    if request.method == "OPTIONS":
+        return jsonify({"msg": "CORS OK"}), 200
     try:
         user_id = get_jwt_identity()
-        notification = Notification.query.filter_by(id=notification_id, user_id=user_id).first()
-        
-        if not notification:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        return jsonify({
+            "username": user.username,
+            }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@auth_bp.route('/notify/one', methods=['OPTIONS', 'GET'])
+@jwt_required()
+def single_notify():
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        return jsonify({"msg": "CORS OK"}), 200
+
+    user_id = get_jwt_identity()
+
+    try:
+        conn_local = psycopg2.connect(
+            host="localhost",
+            database="postgres",
+            user="postgres",
+            password="1234",
+            port="5432"
+        )
+        cur = conn_local.cursor()
+
+        # 1️⃣ Fetch latest unread notification
+        cur.execute(
+            """
+            SELECT id, message
+            FROM notifications
+            WHERE user_id = %s AND is_read = false
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (user_id,)
+        )
+
+        row = cur.fetchone()
+
+        if not row:
+            return jsonify({"message": None}), 200
+
+        notif_id, message = row
+
+        # 2️⃣ Mark notification as read
+        cur.execute(
+            """
+            UPDATE notifications
+            SET is_read = true
+            WHERE id = %s
+            """,
+            (notif_id,)
+        )
+
+        conn_local.commit()
+
+        return jsonify({
+            "id": notif_id,
+            "message": message
+        }), 200
+
+    except Exception as e:
+        print("Notification error:", e)
+        return jsonify({"error": "Server error"}), 500
+
+    finally:
+        if cur:
+            cur.close()
+        if conn_local:
+            conn_local.close()    
+    
+
+
+
+@auth_bp.route("/api/notifications/delete", methods=["POST",'OPTIONS'])
+@jwt_required()
+def mark_notification_read():
+    # Handle CORS
+    if request.method == 'OPTIONS':
+        return jsonify({"msg": "CORS OK"}), 200
+
+    user_id = get_jwt_identity()
+
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            database="postgres",
+            user="postgres",
+            password="1234",
+            port="5432"
+        )
+        cur = conn.cursor()
+
+        # ✅ Correct DELETE query
+        cur.execute(
+            """
+            DELETE FROM notifications
+            WHERE user_id = %s
+            AND created_at < NOW() - INTERVAL '1 day'
+            """,
+            (user_id,)
+        )
+
+        deleted_count = cur.rowcount
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "deleted": deleted_count
+        }), 200
+
+    except Exception as e:
+        print(f"Error deleting notification: {e}")
+        return jsonify({"error": "Could not delete notification"}), 500
+
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+@auth_bp.route('/create_notification', methods=['POST'])
+@jwt_required()
+def create_notification():
+    """Create a new notification for the current user"""
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+
+        notification_type = data.get('type')
+        title = data.get('title')
+        message = data.get('message')
+        symbol = data.get('symbol')
+        notification_data = data.get('data', {})
+
+        if not all([notification_type, title, message]):
             return jsonify({
                 'success': False,
-                'message': 'Notification not found'
-            }), 404
-        
-        # Delete the notification from database
-        db.session.delete(notification)
+                'message': 'Type, title, and message are required'
+            }), 400
+
+        # Create new notification
+        notification = Notification(
+            user_id=user_id,
+            type=notification_type,
+            title=title,
+            message=message,
+            symbol=symbol,
+            data=notification_data
+        )
+
+        db.session.add(notification)
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
-            'message': 'Notification marked as read and deleted'
-        }), 200
+            'message': 'Notification created successfully',
+            'notification_id': notification.id
+        }), 201
+
     except Exception as e:
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': f'Error marking notification as read: {str(e)}'
+            'message': f'Error creating notification: {str(e)}'
         }), 500
 
 if __name__=="__main__":  # Create tables
