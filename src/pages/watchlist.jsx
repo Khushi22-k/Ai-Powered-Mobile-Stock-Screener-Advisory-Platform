@@ -382,11 +382,19 @@ export default function Watchlist() {
               Watchlist
             </button>
              <button
-              onClick={() => navigate('/tradingview')}
+              onClick={() => navigate('/notifications')}
+              className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
+            >
+              Notifications
+            </button>
+
+             <button
+              onClick={() => navigate('/trading')}
               className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
             >
               Portfolio
             </button>
+
             <button
               onClick={handleLogout}
               className="bg-red-600 hover:bg-red-700 text-slate-50 px-4 py-2 rounded-xl border border-red-500 transition flex items-center gap-2"
@@ -408,7 +416,7 @@ export default function Watchlist() {
               >
                 {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
-              <h1 className="text-3xl font-bold text-slate-50">Stock Watchlist</h1>
+              <h1 className="text-3xl font-bold text-slate-50">FinStock Watchlist</h1>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -525,7 +533,7 @@ export default function Watchlist() {
         )}
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
           <div className="bg-slate-800/50 rounded-xl p-6 border-2 border-slate-600 shadow-lg">
             <h3 className="text-lg font-semibold text-slate-50 mb-4">Price History (Candlestick Chart)</h3>
             <div style={{ height: '350px' }}>

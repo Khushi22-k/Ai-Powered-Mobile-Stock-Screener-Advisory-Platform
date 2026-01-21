@@ -162,12 +162,8 @@ export default function Auth({ mode = "signin" }) {
     }
   ];
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-10">
-      <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center justify-center gap-8">
-       
-        {/* Right Side - Auth Form */}
-        <section className="flex items-center">
-          <div className="w-full max-w-md lg: h-auto lg:w-auto rounded-[1.75rem] border border-slate-800 bg-slate-950/85 p-6 shadow-2xl shadow-black/50 sm:p-8 overflow-auto flex flex-col items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-4 sm:py-10">
+      <div className="w-full max-w-md rounded-[1.75rem] border border-slate-800 bg-slate-950/85 p-4 sm:p-6 lg:p-8 shadow-2xl shadow-black/50 overflow-auto flex flex-col items-center justify-center">
             <div className="mb-8 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-semibold text-slate-50">
@@ -301,44 +297,7 @@ export default function Auth({ mode = "signin" }) {
                 {isSignIn ? 'Sign In' : 'Create Account'} <span className="ml-2 text-base">→</span>
               </button>
             </form>
-
-            <div className="mt-6 flex items-center gap-3 text-xs text-slate-500">
-              <span className="h-px flex-1 bg-slate-800" />
-              <span className="tracking-[0.2em]">OR CONTINUE WITH</span>
-              <span className="h-px flex-1 bg-slate-800" />
-            </div>
-
-            <div className="mt-4 flex gap-3">
-              <button
-                type="button"
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700/80 bg-slate-900/80 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-slate-600 hover:bg-slate-900"
-              >
-                <span className="text-lg">G</span>
-                <span>Google</span>
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700/80 bg-slate-900/80 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-slate-600 hover:bg-slate-900"
-              >
-                <span className="text-lg">GH</span>
-                <span>GitHub</span>
-              </button>
-            </div>
-
-            <p className="mt-6 text-[11px] leading-relaxed text-slate-500">
-              By continuing, you agree to our{' '}
-              <button type="button" className="text-cyan-300 hover:text-cyan-200">
-                Terms of Service
-              </button>{' '}
-              and{' '}
-              <button type="button" className="text-cyan-300 hover:text-cyan-200">
-                Privacy Policy
-              </button>
-              .
-            </p>
           </div>
-        </section>
-      </div>
     </div>
   );
 }

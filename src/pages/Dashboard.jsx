@@ -387,13 +387,13 @@ useEffect(() => {
             >
               Watchlist
             </button>
-             <button
-              onClick={() => navigate('/tradingview')}
+            <button
+              onClick={() => navigate('/trading')}
               className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition"
             >
-              Trading view
+              Trading
             </button>
-            <button
+             <button
               onClick={() => navigate('/notifications')}
               className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-50 px-4 py-2 rounded-xl border border-slate-700/50 transition flex items-center gap-2"
             >
@@ -414,7 +414,7 @@ useEffect(() => {
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-3xl font-bold text-slate-50">Stock Market Dashboard</h1>
+              <h1 className="text-3xl font-bold text-slate-50">FinStocks Dashboard</h1>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => navigate('/notifications')}
@@ -541,7 +541,7 @@ useEffect(() => {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-8">
           <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
             <h3 className="text-lg font-semibold text-slate-50 mb-4">Stock Prices</h3>
             <Bar data={priceChartData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
@@ -554,10 +554,7 @@ useEffect(() => {
             <h3 className="text-lg font-semibold text-slate-50 mb-4">Market Cap Distribution</h3>
             <Pie data={marketCapChartData} options={{ responsive: true }} />
           </div>
-          <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
-            <h3 className="text-lg font-semibold text-slate-50 mb-4">Industry Investment Distribution (Total Stocks: {stocks.length})</h3>
-            <Doughnut data={industryDonutData} options={{ responsive: true }} />
-          </div>
+          
         </div>
 
 

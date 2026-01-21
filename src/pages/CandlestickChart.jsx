@@ -13,6 +13,7 @@ import {
 } from "chart.js";
 import "chartjs-adapter-date-fns";
 import { Chart } from "react-chartjs-2";
+import { TrendingUp, TrendingDown, X } from "lucide-react";
 
 ChartJS.register(
   LinearScale,
@@ -48,6 +49,13 @@ function StockChart() {
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isTradingOpen, setIsTradingOpen] = useState(false);
+  const [tradeSymbol, setTradeSymbol] = useState(symbol);
+  const [quantity, setQuantity] = useState('');
+  const [currentPrice, setCurrentPrice] = useState(null);
+  const [tradeLoading, setTradeLoading] = useState(false);
+  const [tradeError, setTradeError] = useState('');
+  const [tradeSuccess, setTradeSuccess] = useState('');
 
   useEffect(() => {
     if (urlSymbol) setSymbol(urlSymbol);
@@ -77,7 +85,7 @@ function StockChart() {
 
         const json = await res.json();
         console.log("json",json);
-                
+
         let eod = [];
 
         // Case 1: data is array
@@ -128,6 +136,76 @@ function StockChart() {
     fetchData();
   }, [symbol, range, chartType]);
 
+  const fetchStockPrice = async (stockSymbol) => {
+    if (!stockSymbol) return;
+    try {
+      setTradeLoading(true);
+      setTradeError('');
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`http://localhost:5000/auth/stock/${stockSymbol}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (!res.ok) throw new Error("Stock not found");
+      const data = await res.json();
+      setCurrentPrice(data.price);
+    } catch (err) {
+      setTradeError(err.message);
+      setCurrentPrice(null);
+    } finally {
+      setTradeLoading(false);
+    }
+  };
+
+  const handleTradeSymbolChange = (e) => {
+    const value = e.target.value.toUpperCase();
+    setTradeSymbol(value);
+    if (value) {
+      fetchStockPrice(value);
+    } else {
+      setCurrentPrice(null);
+    }
+  };
+
+  const handleTrade = async (action) => {
+    if (!tradeSymbol || !quantity || !currentPrice) {
+      setTradeError('Please fill all fields');
+      return;
+    }
+    try {
+      setTradeLoading(true);
+      setTradeError('');
+      setTradeSuccess('');
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`http://localhost:5000/auth/${action}`, {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ symbol: tradeSymbol, quantity: parseInt(quantity), price: currentPrice })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || `${action} failed`);
+      setTradeSuccess(`${action.toUpperCase()} successful for ${quantity} shares of ${tradeSymbol}`);
+      setTradeSymbol('');
+      setQuantity('');
+      setCurrentPrice(null);
+    } catch (err) {
+      setTradeError(err.message);
+    } finally {
+      setTradeLoading(false);
+    }
+  };
+
+  const openTradingModal = () => {
+    setTradeSymbol(symbol);
+    setIsTradingOpen(true);
+    fetchStockPrice(symbol);
+  };
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -171,12 +249,12 @@ function StockChart() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto">
         {/* HEADER */}
         <div className="flex flex-col lg:flex-row gap-6 mb-8 justify-between items-start lg:items-center">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-            Stock Price Charts
+            FinStocks Price Charts
           </h1>
           
           {/* STOCK SELECTOR */}
@@ -235,12 +313,113 @@ function StockChart() {
             <div className="text-slate-400 text-sm">{chartType === "line" ? "Line Chart" : "Area Chart"}</div>
           </div>
 
-          <div className="relative h-[600px] w-full">
+          <div className="relative h-64 md:h-96 lg:h-[600px] w-full">
             {loading && <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-xl text-white text-xl font-medium">Loading {range.label} data for {symbol}...</div>}
             {error && <div className="absolute inset-0 flex items-center justify-center bg-red-900/80 rounded-xl text-red-300 text-lg">Error: {error}</div>}
             {!loading && !error && chartData && <Chart type="line" data={chartData} options={options} />}
           </div>
         </div>
+
+        {/* TRADING MODAL */}
+        {isTradingOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-50">Trade {symbol}</h3>
+                <button
+                  onClick={() => setIsTradingOpen(false)}
+                  className="text-slate-400 hover:text-slate-50"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {tradeError && (
+                <div className="text-red-400 text-sm text-center bg-red-400/10 border border-red-400/30 rounded-lg p-3 mb-4">
+                  {tradeError}
+                </div>
+              )}
+              {tradeSuccess && (
+                <div className="text-green-400 text-sm text-center bg-green-400/10 border border-green-400/30 rounded-lg p-3 mb-4">
+                  {tradeSuccess}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-300" htmlFor="tradeSymbol">
+                    Stock Symbol
+                  </label>
+                  <div className="flex items-center rounded-xl border border-slate-700/80 bg-slate-900/80 px-3">
+                    <span className="mr-2 text-slate-500">📈</span>
+                    <input
+                      id="tradeSymbol"
+                      type="text"
+                      placeholder="e.g., AAPL"
+                      value={tradeSymbol}
+                      onChange={handleTradeSymbolChange}
+                      className="h-10 w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {currentPrice && (
+                  <div className="bg-slate-700/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300">Current Price:</span>
+                      <span className="text-slate-50 font-semibold">${currentPrice.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-300" htmlFor="quantity">
+                    Quantity
+                  </label>
+                  <div className="flex items-center rounded-xl border border-slate-700/80 bg-slate-900/80 px-3">
+                    <span className="mr-2 text-slate-500">📊</span>
+                    <input
+                      id="quantity"
+                      type="number"
+                      placeholder="Number of shares"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      className="h-10 w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {currentPrice && quantity && (
+                  <div className="bg-slate-700/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300">Total Value:</span>
+                      <span className="text-slate-50 font-semibold">${(currentPrice * parseInt(quantity || 0)).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => handleTrade('buy')}
+                    disabled={tradeLoading || !tradeSymbol || !quantity}
+                    className="flex-1 inline-flex items-center justify-center rounded-xl bg-green-500 px-4 py-2.5 text-sm font-medium text-slate-950 shadow-glow-green transition hover:bg-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <TrendingUp size={16} className="mr-2" />
+                    Buy
+                  </button>
+                  <button
+                    onClick={() => handleTrade('sell')}
+                    disabled={tradeLoading || !tradeSymbol || !quantity}
+                    className="flex-1 inline-flex items-center justify-center rounded-xl bg-red-500 px-4 py-2.5 text-sm font-medium text-slate-950 shadow-glow-red transition hover:bg-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <TrendingDown size={16} className="mr-2" />
+                    Sell
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

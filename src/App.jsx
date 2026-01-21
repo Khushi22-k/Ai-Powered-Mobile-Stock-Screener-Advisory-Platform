@@ -7,7 +7,7 @@ import Chatgpt from './pages/chatgpt.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Watchlist from './pages/watchlist.jsx';
 import Notifications from './pages/Notifications.jsx';
-import TradingViewWidget from './pages/tradingview.jsx';
+import Trading from './pages/Trading.jsx';
 import { ToastContainer } from 'react-toastify';
 import "react-toastify/dist/ReactToastify.css";
 
@@ -37,7 +37,8 @@ function App() {
         <Route path="/watchlist" element={<Watchlist />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/chatgpt" element={<Chatgpt />} />
-        <Route path="/tradingview" element={<TradingViewWidget />} />
+        <Route path="/trading" element={<Trading />} />
+       
         <Route path="/CandlestickChart/:symbol?" element={<MarketStackData />} />
       </Routes>
     </div>

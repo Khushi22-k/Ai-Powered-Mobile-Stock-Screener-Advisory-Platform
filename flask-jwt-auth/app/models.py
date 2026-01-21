@@ -71,46 +71,14 @@ class Notification(db.Model):
 
     user = db.relationship('User', backref=db.backref('notifications', lazy=True))
 
-class NotificationPreference(db.Model):
-    __tablename__ = 'notification_preferences'
-
-    user_id = db.Column(db.Integer, db.ForeignKey('users_info.id'), primary_key=True, nullable=False)
-    price_alerts_enabled = db.Column(db.Boolean, default=True)
-    ai_signal_alerts_enabled = db.Column(db.Boolean, default=True)
-    risk_alerts_enabled = db.Column(db.Boolean, default=True)
-    price_upper_threshold = db.Column(db.Numeric(6, 2), default=5.0)  # Percentage
-    price_lower_threshold = db.Column(db.Numeric(6, 2), default=-5.0)  # Percentage
-    ai_confidence_threshold = db.Column(db.Numeric(3, 2), default=0.7)  # 0.0 to 1.0
-    cooldown_minutes = db.Column(db.Integer, default=60)  # Minutes between similar notifications
-
-    user = db.relationship('User', backref=db.backref('notification_preferences', lazy=True))
-
-class StockHistorical(db.Model):
-    __tablename__ = 'stock_historical'
+class StockTransaction(db.Model):
+    __tablename__='portfolio_stocks'
 
     id = db.Column(db.Integer, primary_key=True)
-    symbol = db.Column(db.String(30), nullable=False, index=True)
-    date = db.Column(db.Date, nullable=False)
-    close_price = db.Column(db.Numeric(10, 2), nullable=False)
-    volume = db.Column(db.BigInteger, nullable=False)
-
-class StockLatestSnapshot(db.Model):
-    __tablename__ = 'stock_latest_snapshot'
-
-    symbol = db.Column(db.String(30), primary_key=True)
-    last_price = db.Column(db.Numeric(10, 2))
-    last_signal = db.Column(db.String(20))
-    last_checked = db.Column(db.DateTime, default=datetime.utcnow)
-
-class AlertRules(db.Model):
-    __tablename__ = 'alert_rules'
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users_info.id'), nullable=False)
-    symbol = db.Column(db.String(30), nullable=False)
-    alert_type = db.Column(db.String(50), nullable=False)
-    triggered = db.Column(db.Boolean, default=False)
-    last_triggered = db.Column(db.DateTime, default=datetime.utcnow)
-
-    user = db.relationship('User', backref=db.backref('alert_rules', lazy=True))
-
+    user_id =db.Column(db.Integer, db.ForeignKey('users_info.id'), nullable=False)
+    symbol = db.Column(db.String(30), nullable=False)   
+    quantity=db.Column(db.Integer, nullable=False)
+    avg_price=db.Column(db.Numeric(10,2), nullable=False)
+    current_price=db.Column(db.Numeric(10,2), nullable=False)
+    profit_loss=db.Column(db.Numeric(10,2), nullable=False)
+    status=db.Column(db.String(10), nullable=False) #'buy' or 'sell'

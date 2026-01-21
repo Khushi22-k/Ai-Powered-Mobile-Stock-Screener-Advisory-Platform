@@ -17,7 +17,7 @@ import { chatGPTQuery } from '/src/utils/chatApi.js';
 
 const ChatGPTClone = () => {
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);
@@ -170,12 +170,12 @@ const ChatGPTClone = () => {
       <main className="flex-1 flex flex-col relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
         
         {/* Header */}
-        <header className="p-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <header className="p-2 sm:p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-4">
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-[#2f2f2f] rounded-lg text-gray-400">
               {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
             </button>
-            <span className="font-semibold text-gray-200">Rag Application Assistant</span>
+            <span className="font-semibold text-gray-200 text-sm sm:text-base">FinStocks Assistant</span>
           </div>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}

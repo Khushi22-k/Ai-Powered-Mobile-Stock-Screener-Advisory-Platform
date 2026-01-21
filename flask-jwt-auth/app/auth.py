@@ -10,8 +10,8 @@ from .llm import call_ai_model
 import uuid
 from tqdm import tqdm
 import requests
-from flask_cors import cross_origin
-from .models import User, ChatRequest, StockData, Watchlist, Notification
+from flask_cors import CORS, cross_origin
+from .models import User, ChatRequest, StockData, Watchlist, Notification, StockTransaction
 from .rag import retrieve_context
 from sqlalchemy import create_engine
 from config import Config
@@ -136,6 +136,124 @@ def store_user_message(message: str):
 
     # 6️⃣ Return embedding & response if needed
     return embedding, response
+
+#----buy stocks----
+@auth_bp.route('/buy', methods=['POST','OPTIONS'])
+@jwt_required()
+def buy_stock():
+    if request.method == "OPTIONS":
+        return jsonify({"msg": "CORS OK"}), 200
+    user_id = get_jwt_identity()
+    data = request.get_json()
+    symbol = data.get("symbol")
+    quantity = data.get("quantity")
+
+    if not symbol or not quantity:
+        return jsonify({"error": "Symbol and quantity are required"}), 400
+
+    try:
+        quantity = int(quantity)
+        if quantity <= 0:
+            return jsonify({"error": "Quantity must be a positive integer"}), 400
+    except ValueError:
+        return jsonify({"error": "Quantity must be a valid integer"}), 400
+
+    # Fetch stock data
+    stock = StockData.query.filter_by(symbol=symbol.upper()).first()
+    if not stock:
+        return jsonify({"error": "Stock not found"}), 404
+
+    current_price = float(stock.last_traded_price)
+    avg_price = float((stock.last_traded_price)/2)
+
+    # Create transaction
+    transaction = StockTransaction(
+        user_id=int(user_id),
+        symbol=symbol.upper(),
+        quantity=quantity,
+        avg_price=avg_price,
+        current_price=current_price,
+        profit_loss=0.0,
+        status='BUY'
+    )
+
+    db.session.add(transaction)
+    db.session.commit()
+
+    return jsonify({"message": f"Successfully bought {quantity} shares of {symbol} at {current_price} each"}), 200
+
+
+
+
+
+#----sell stocks----
+@auth_bp.route('/sell', methods=['POST','OPTIONS'])
+@jwt_required()
+def sell_stock():
+    if request.method == "OPTIONS":
+        return jsonify({"msg": "CORS OK"}), 200
+    user_id = get_jwt_identity()
+    data = request.get_json()
+    symbol = data.get("symbol")
+    quantity = data.get("quantity")
+
+    if not symbol or not quantity:
+        return jsonify({"error": "Symbol and quantity are required"}), 400
+
+    try:
+        quantity = int(quantity)
+        if quantity <= 0:
+            return jsonify({"error": "Quantity must be a positive integer"}), 400
+    except ValueError:
+        return jsonify({"error": "Quantity must be a valid integer"}), 400
+
+    # Find and delete the transaction
+    transaction = StockTransaction.query.filter_by(
+        user_id=int(user_id),
+        symbol=symbol.upper(),
+        status='BUY'
+    ).first()
+
+    if not transaction:
+        return jsonify({"error": "Stock holding not found"}), 404
+
+    if transaction.quantity < quantity:
+        return jsonify({"error": "Insufficient quantity to sell"}), 400
+
+    # If selling all shares, delete the transaction
+    if transaction.quantity == quantity:
+        db.session.delete(transaction)
+    else:
+        # If selling partial shares, update the quantity
+        transaction.quantity -= quantity
+
+    db.session.commit()
+
+    return jsonify({"message": f"Successfully sold {quantity} shares of {symbol}"}), 200
+
+#----fetch Portfolio stocks----
+@auth_bp.route('/portfolio', methods=['GET','OPTIONS'])
+@cross_origin()
+@jwt_required()
+def get_portfolio():
+    user_id = get_jwt_identity()
+    if request.method=='OPTIONS':
+        return jsonify({"msg": "CORS OK"}), 200
+    transactions = StockTransaction.query.filter_by(user_id=user_id).all()  
+    portfolio = []
+    for transaction in transactions:
+        stock = StockData.query.filter_by(symbol=transaction.symbol).first()
+        portfolio.append({
+            'symbol': transaction.symbol,
+            'quantity': transaction.quantity,
+            'avg_price': transaction.avg_price,
+            'current_price': stock.last_traded_price if stock else None,
+            'profit_loss': transaction.profit_loss,
+            'status': transaction.status
+        })
+    return jsonify(portfolio), 200
+
+
 
 #send verification email
 def send_email_verification():
