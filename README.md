@@ -1,16 +1,101 @@
-# React + Vite
+# 📈 AI-Powered Stock Screener & Advisory Platform #
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An intelligent, data-driven platform that screens stocks, analyzes market trends, and provides actionable investment insights using machine learning, technical indicators, and real-time financial data.
 
-Currently, two official plugins are available:
+# 🚀 Project Overview #
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The AI-Powered Stock Screener and Advisory Platform helps investors identify high-potential stocks by combining financial metrics, technical indicators, and predictive models. The system enables users to screen stocks based on custom filters, analyze performance trends, and receive AI-based advisory insights to support smarter investment decisions.
 
-## React Compiler
+🎯 Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+🔍 Advanced Stock Screening
 
-## Expanding the ESLint configuration
+Filter stocks based on price, volume, market cap, P/E ratio, and growth metrics
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+🤖 AI-Driven Analysis
+
+Machine learning models for trend prediction and pattern recognition
+
+🧠 Advisory Insights
+
+Buy/Sell/Hold recommendations based on data-driven signals
+
+📈 Portfolio Tracking
+
+Track holdings, profit/loss, and real-time stock performance
+
+🔐 Secure Authentication
+
+User login with JWT-based authentication
+
+📉 Interactive Dashboard
+
+Visual analytics for trends, indicators, and predictions
+
+# 🏗️ System Architecture #
+
+Frontend (React / UI)
+        |
+Backend API (Flask / Node.js)
+        |
+RAG Application Model
+        |
+Financial Data APIs & Database
+
+🛠️ Tech Stack
+Frontend
+
+React.js
+
+Chart.js / Recharts
+
+Tailwind CSS / Bootstrap
+
+Backend
+
+Flask / Node.js
+
+RESTful APIs
+
+JWT Authentication
+
+Python
+
+Database
+
+PostgreSQL / MySQL
+
+APIs
+
+Yahoo Finance / Alpha Vantage (or similar market data APIs)
+
+# 📂 Project Structure
+ai-stock-screener/
+│
+├── backend/
+│   ├── __init__.py
+│   ├── auth.py (main file of backend)
+│   ├── run.py
+│   └── app.py
+|-.env
+├── frontend/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+│
+├── README.md
+└── requirements.txt
+
+# ⚙️ Installation & Setup
+1️⃣ Clone the Repository
+git clone https://github.com/Khushi22-k/Ai-Powered-Mobile-Stock-Screener-Advisory-Platform.git
+cd ai-stock-screener
+
+2️⃣ Backend Setup
+pip install -r requirements.txt
+python app.py
+
+3️⃣ Frontend Setup
+cd frontend
+npm install
+npm start
